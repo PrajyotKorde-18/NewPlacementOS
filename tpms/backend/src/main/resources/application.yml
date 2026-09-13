@@ -1,0 +1,39 @@
+server:
+  port: 8081
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: tpms-backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/tpms_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:Arjun}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+app:
+  bootstrap:
+    coordinator-email: ${BOOTSTRAP_COORDINATOR_EMAIL:coord_user@rknec.edu}
+    coordinator-password: ${BOOTSTRAP_COORDINATOR_PASSWORD:Coord@12345}
+  auth:
+    jwt-secret: ${JWT_SECRET:b5fdcda6d2fac77740f1edac9926630fedb032c696a707cf81438282219d09f74}
+    jwt-expiration-ms: 86400000 # 24 hours
+    allowed-email-domain: rknec.edu
+  groq:
+    api-key: ${GROQ_API_KEY:your_groq_api_key_here}
+    mock-mode: false
+    model: groq/compound-mini
+
+logging:
+  level:
+    com.placementos.tpms: DEBUG
+    org.springframework.security: INFO

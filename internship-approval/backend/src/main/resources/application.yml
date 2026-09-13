@@ -1,0 +1,37 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: internship-approval-backend
+  datasource:
+    url: jdbc:mysql://localhost:3306/internship_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:Arjun}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+app:
+  auth:
+    jwt-secret: ${JWT_SECRET:b5fdcda6d2fac77740f1edac9926630fedb032c696a707cf81438282219d09f74}
+    jwt-expiration-ms: 86400000 # 24 hours
+    allowed-email-domain: rknec.edu
+  bootstrap:
+    admin-email: ${BOOTSTRAP_ADMIN_EMAIL:admin@rknec.edu}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:Admin@12345}
+    admin-name: ${BOOTSTRAP_ADMIN_NAME:System CDPC Admin}
+    admin-college-id: ${BOOTSTRAP_ADMIN_COLLEGE_ID:ADMIN001}
+
+logging:
+  level:
+    com.placementos.internship: DEBUG
+    org.springframework.security: INFO

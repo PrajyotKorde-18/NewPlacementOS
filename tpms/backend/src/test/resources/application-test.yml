@@ -1,0 +1,16 @@
+app:
+  auth:
+    jwt-secret: test_jwt_secret_key_mock_for_unit_testing_only_1234567890_abcdef
+    jwt-expiration-ms: 86400000
+    allowed-email-domain: rknec.edu
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
