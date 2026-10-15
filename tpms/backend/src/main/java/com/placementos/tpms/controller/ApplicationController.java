@@ -21,6 +21,7 @@ public class ApplicationController {
     private final FeedbackGeneratorService feedbackGeneratorService;
 
     @PostMapping("/{applicationId}/override")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<ApplicationResponseDTO> overrideStatus(
             @PathVariable Long applicationId,
             @Valid @RequestBody OverrideStatusRequestDTO request,

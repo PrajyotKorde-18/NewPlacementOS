@@ -61,6 +61,7 @@ public class AsyncResumeProcessor {
 
             // 2. Only if profile write succeeds, update resume version status to PROCESSED / FLAGGED_FOR_REVIEW
             resumeVersion.setExtractionStatus(status);
+            resumeVersion.setExtractionSource(parsedDTO.getExtractionSource());
             if (status == ExtractionStatus.FLAGGED_FOR_REVIEW) {
                 resumeVersion.setErrorLog("Ambiguous or minimal data extracted from resume text.");
             } else {

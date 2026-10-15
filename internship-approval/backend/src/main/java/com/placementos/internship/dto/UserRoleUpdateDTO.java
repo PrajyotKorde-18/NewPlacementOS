@@ -8,5 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class UserRoleUpdateDTO {
+    @jakarta.validation.constraints.NotNull(message = "Role is required")
     private Role role;
 }

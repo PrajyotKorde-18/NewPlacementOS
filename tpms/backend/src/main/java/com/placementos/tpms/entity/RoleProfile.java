@@ -38,6 +38,9 @@ public class RoleProfile {
     @Column(name = "max_active_backlogs")
     private Integer maxActiveBacklogs;
 
+    @Column(name = "extraction_source")
+    private String extractionSource;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

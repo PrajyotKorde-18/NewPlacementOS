@@ -134,6 +134,7 @@ public class ResumeExtractionService {
                     .summary(summary)
                     .achievements(achievements)
                     .rawText(rawText)
+                    .extractionSource("LLM")
                     .build();
         } else {
             throw new RuntimeException("Groq API returned HTTP status: " + response.getStatusCode());
@@ -181,6 +182,7 @@ public class ResumeExtractionService {
                 .summary(summary)
                 .achievements(achievements)
                 .rawText(rawText)
+                .extractionSource("MOCK")
                 .build();
     }
 
@@ -194,6 +196,7 @@ public class ResumeExtractionService {
                 .summary("")
                 .achievements("")
                 .rawText("")
+                .extractionSource("MOCK")
                 .build();
     }
 }

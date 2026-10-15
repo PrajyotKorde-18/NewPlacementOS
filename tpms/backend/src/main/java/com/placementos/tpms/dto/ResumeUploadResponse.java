@@ -18,4 +18,5 @@ public class ResumeUploadResponse {
     private ExtractionStatus extractionStatus;
     private String message;
     private ParsedResumeDTO extractedData;
+    private String extractionSource;
 }

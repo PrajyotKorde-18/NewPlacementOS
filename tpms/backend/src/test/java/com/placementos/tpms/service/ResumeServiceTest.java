@@ -59,7 +59,7 @@ class ResumeServiceTest {
                 ResumeVersion.builder().id(1L).student(testStudent).extractionStatus(ExtractionStatus.PENDING).build()
         ));
 
-        MockMultipartFile mockFile = new MockMultipartFile("file", "resume.pdf", "application/pdf", "dummy resume content".getBytes());
+        MockMultipartFile mockFile = new MockMultipartFile("file", "resume.pdf", "application/pdf", "%PDF-1.4\ndummy resume content".getBytes());
 
         ResumeUploadResponse response = resumeService.uploadResume(10L, mockFile);
 

@@ -23,6 +23,7 @@ public class StudentProfileService {
     private final StudentProfileRepository studentProfileRepository;
     private final AcademicProfileRepository academicProfileRepository;
     private final UserRepository userRepository;
+    private final ResumeVersionRepository resumeVersionRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -232,6 +233,9 @@ public class StudentProfileService {
                 .projects(profile != null ? parseJson(profile.getProjects()) : Collections.emptyList())
                 .internships(profile != null ? parseJson(profile.getInternships()) : Collections.emptyList())
                 .codingProfiles(profile != null ? parseJson(profile.getCodingProfiles()) : Collections.emptyMap())
+                .extractionSource(resumeVersionRepository.findTopByStudentIdOrderByUploadedAtDesc(student.getId())
+                        .map(ResumeVersion::getExtractionSource)
+                        .orElse("MOCK"))
                 .build();
     }
 

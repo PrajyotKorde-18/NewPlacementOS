@@ -34,6 +34,9 @@ public class ResumeVersion {
     @Column(name = "error_log", columnDefinition = "TEXT")
     private String errorLog;
 
+    @Column(name = "extraction_source")
+    private String extractionSource;
+
     @PrePersist
     protected void onCreate() {
         this.uploadedAt = LocalDateTime.now();

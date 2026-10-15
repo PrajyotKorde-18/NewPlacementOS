@@ -35,4 +35,5 @@ public class StudentFullProfileDTO {
     private Object projects;
     private Object internships;
     private Object codingProfiles;
+    private String extractionSource;
 }

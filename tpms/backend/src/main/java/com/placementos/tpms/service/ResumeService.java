@@ -37,6 +37,12 @@ public class ResumeService {
 
     @Transactional
     public ResumeUploadResponse uploadResume(Long studentId, MultipartFile file) {
+        com.placementos.tpms.util.FileUploadValidator.validateFile(
+                file,
+                com.placementos.tpms.util.FileUploadValidator.ALLOWED_RESUME_EXTENSIONS,
+                com.placementos.tpms.util.FileUploadValidator.DEFAULT_MAX_SIZE_BYTES
+        );
+
         Student student = resolveStudent(studentId);
 
         String savedFilePath = saveFile(file);
@@ -63,6 +69,7 @@ public class ResumeService {
                 .extractionStatus(updated.getExtractionStatus())
                 .message("Resume uploaded and parsed successfully.")
                 .extractedData(null)
+                .extractionSource(updated.getExtractionSource())
                 .build();
     }
 
@@ -72,8 +79,8 @@ public class ResumeService {
             Path targetDir = Paths.get(effectiveUploadDir).toAbsolutePath().normalize();
             Files.createDirectories(targetDir);
 
-            String originalName = file.getOriginalFilename();
-            String fileName = UUID.randomUUID() + "_" + (originalName != null ? originalName : "resume.pdf");
+            String sanitized = com.placementos.tpms.util.FileUploadValidator.sanitizeFilename(file.getOriginalFilename());
+            String fileName = UUID.randomUUID() + "_" + sanitized;
             Path targetPath = targetDir.resolve(fileName);
 
             Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);

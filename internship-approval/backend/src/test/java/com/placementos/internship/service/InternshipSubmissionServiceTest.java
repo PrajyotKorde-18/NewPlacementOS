@@ -238,12 +238,13 @@ class InternshipSubmissionServiceTest {
             return req;
         });
 
+        byte[] validPdfBytes = "%PDF-1.4\ndummy content".getBytes();
         org.springframework.mock.web.MockMultipartFile mockFile = new org.springframework.mock.web.MockMultipartFile(
-                "file", "offer.pdf", "application/pdf", "dummy content".getBytes()
+                "file", "offer.pdf", "application/pdf", validPdfBytes
         );
 
         java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
-        byte[] hashBytes = digest.digest("dummy content".getBytes());
+        byte[] hashBytes = digest.digest(validPdfBytes);
         StringBuilder hexString = new StringBuilder();
         for (byte b : hashBytes) hexString.append(String.format("%02x", b));
         String expectedHash = hexString.toString();
@@ -265,5 +266,32 @@ class InternshipSubmissionServiceTest {
         assertEquals(InternshipRequestStatus.FLAGGED_FOR_REVIEW, response.getStatus());
         assertNotNull(response.getScamFlags());
         assertEquals("DUPLICATE_OFFER_LETTER_FILE", response.getScamFlags().get(0).getFlagType());
+    }
+
+    @Test
+    @DisplayName("Zero Active Rules Guard: If zero active policy rules are configured, flag submission for review")
+    void testSubmitOffer_ZeroActiveRules_FlagsForReviewWithReason() throws Exception {
+        when(studentRepository.findById(1L)).thenReturn(Optional.of(testStudent));
+        when(policyRuleRepository.findByIsActiveTrue()).thenReturn(Collections.emptyList());
+
+        when(requestRepository.save(any(InternshipRequest.class))).thenAnswer(inv -> {
+            InternshipRequest req = inv.getArgument(0);
+            if (req.getId() == null) req.setId(30L);
+            return req;
+        });
+
+        InternshipSubmissionDTO dto = InternshipSubmissionDTO.builder()
+                .studentId(1L)
+                .companyName("ValidCorp")
+                .roleTitle("SWE Intern")
+                .durationWeeks(8)
+                .stipend(new BigDecimal("25000"))
+                .hrContactEmail("recruiter@validcorp.com")
+                .build();
+
+        InternshipResponseDTO response = submissionService.submitOffer(dto, null);
+
+        assertEquals(InternshipRequestStatus.FLAGGED_FOR_REVIEW, response.getStatus());
+        assertEquals("no active policy rules configured", response.getRejectionReason());
     }
 }

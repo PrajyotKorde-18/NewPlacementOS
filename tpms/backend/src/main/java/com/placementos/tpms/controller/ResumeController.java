@@ -5,6 +5,7 @@ import com.placementos.tpms.dto.ResumeUploadResponse;
 import com.placementos.tpms.entity.ResumeVersion;
 import com.placementos.tpms.entity.Student;
 import com.placementos.tpms.entity.StudentProfile;
+import com.placementos.tpms.entity.User;
 import com.placementos.tpms.exception.ResourceNotFoundException;
 import com.placementos.tpms.repository.ResumeVersionRepository;
 import com.placementos.tpms.repository.StudentProfileRepository;
@@ -61,6 +62,52 @@ public class ResumeController {
         ));
     }
 
+    @GetMapping("/resumes/{versionId}/download")
+    public ResponseEntity<byte[]> downloadResume(@PathVariable Long versionId, java.security.Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            throw new com.placementos.tpms.exception.AppException("Authentication required to download resume", HttpStatus.UNAUTHORIZED);
+        }
+
+        ResumeVersion version = resumeVersionRepository.findById(versionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Resume version not found with id: " + versionId));
+
+        String requesterEmail = principal.getName();
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found with email: " + requesterEmail));
+
+        boolean isStaff = "COORDINATOR".equalsIgnoreCase(requester.getRole()) || "ADMIN".equalsIgnoreCase(requester.getRole());
+        boolean isOwner = version.getStudent() != null
+                && version.getStudent().getUser() != null
+                && requester.getId().equals(version.getStudent().getUser().getId());
+
+        if (!isStaff && !isOwner) {
+            throw new com.placementos.tpms.exception.AppException(
+                    "Access denied: You do not have permission to download this resume",
+                    HttpStatus.FORBIDDEN
+            );
+        }
+
+        if (version.getFilePath() == null) {
+            throw new ResourceNotFoundException("No file associated with this resume version");
+        }
+
+        java.nio.file.Path filePath = java.nio.file.Paths.get(version.getFilePath());
+        if (!java.nio.file.Files.exists(filePath)) {
+            throw new ResourceNotFoundException("Resume file not found on disk");
+        }
+
+        try {
+            byte[] bytes = java.nio.file.Files.readAllBytes(filePath);
+            String filename = filePath.getFileName().toString();
+            return ResponseEntity.ok()
+                    .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(bytes);
+        } catch (java.io.IOException e) {
+            throw new com.placementos.tpms.exception.AppException("Failed to read file", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @GetMapping("/resumes/student/{studentId}/profile")
     public ResponseEntity<?> getStudentProfile(@PathVariable Long studentId) {
         // Bug 3 Fix: Read-only GET lookup. Throws ResourceNotFoundException if student missing (NO save() performed!)
@@ -82,6 +129,11 @@ public class ResumeController {
             res.put("certifications", Collections.emptyList());
             res.put("codingProfiles", Collections.emptyMap());
         }
+
+        String source = resumeVersionRepository.findTopByStudentIdOrderByUploadedAtDesc(student.getId())
+                .map(ResumeVersion::getExtractionSource)
+                .orElse("MOCK");
+        res.put("extractionSource", source);
 
         return ResponseEntity.ok(res);
     }

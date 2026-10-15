@@ -27,6 +27,7 @@ public class DriveController {
     private final JdExtractionService jdExtractionService;
 
     @PostMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<DriveDTO> createDrive(
             @Valid @RequestBody DriveDTO driveDTO,
             java.security.Principal principal) {
@@ -41,6 +42,7 @@ public class DriveController {
     }
 
     @PostMapping("/extract-jd")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<RoleProfileDTO> extractJdFromText(@RequestBody Map<String, String> request) throws Exception {
         String jdText = request.getOrDefault("jdText", "");
         RoleProfileDTO preview = jdExtractionService.extractJdFromText(jdText);
@@ -48,7 +50,13 @@ public class DriveController {
     }
 
     @PostMapping(value = "/extract-jd-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<RoleProfileDTO> extractJdFromFile(@RequestParam("file") MultipartFile file) throws Exception {
+        com.placementos.tpms.util.FileUploadValidator.validateFile(
+                file,
+                com.placementos.tpms.util.FileUploadValidator.ALLOWED_JD_EXTENSIONS,
+                com.placementos.tpms.util.FileUploadValidator.DEFAULT_MAX_SIZE_BYTES
+        );
         RoleProfileDTO preview = jdExtractionService.extractJdFromPdf(file);
         return ResponseEntity.ok(preview);
     }
@@ -59,20 +67,23 @@ public class DriveController {
     }
 
     @PutMapping("/{driveId}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<DriveDTO> updateDrive(
             @PathVariable Long driveId,
-            @RequestBody DriveDTO driveDTO) {
+            @Valid @RequestBody DriveDTO driveDTO) {
         DriveDTO updated = driveService.updateDrive(driveId, driveDTO);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{driveId}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<Map<String, Object>> deleteDrive(@PathVariable Long driveId) {
         driveService.deleteDrive(driveId);
         return ResponseEntity.ok(Map.of("message", "Drive deleted successfully", "driveId", driveId));
     }
 
     @PostMapping("/{driveId}/apply")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<ApplicationResponseDTO> applyToDrive(
             @PathVariable Long driveId,
             @RequestParam("studentId") Long studentId) {
@@ -81,12 +92,14 @@ public class DriveController {
     }
 
     @PostMapping("/{driveId}/rank")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<List<ApplicationResponseDTO>> rankApplications(@PathVariable Long driveId) {
         List<ApplicationResponseDTO> ranked = driveService.calculateAndRankApplications(driveId);
         return ResponseEntity.ok(ranked);
     }
 
     @GetMapping("/{driveId}/applications")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('COORDINATOR', 'ADMIN')")
     public ResponseEntity<List<ApplicationResponseDTO>> getDriveApplications(@PathVariable Long driveId) {
         return ResponseEntity.ok(driveService.getDriveApplications(driveId));
     }

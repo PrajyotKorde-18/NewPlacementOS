@@ -150,6 +150,7 @@ public class JdExtractionService {
                     .minTenthPercentage(minTenth)
                     .minTwelfthPercentage(minTwelfth)
                     .maxActiveBacklogs(maxBacklogs)
+                    .extractionSource("LLM")
                     .build();
         } else {
             throw new RuntimeException("Groq API returned HTTP status: " + response.getStatusCode());
@@ -205,6 +206,7 @@ public class JdExtractionService {
                 .minTenthPercentage(70.0)
                 .minTwelfthPercentage(70.0)
                 .maxActiveBacklogs(1)
+                .extractionSource("MOCK")
                 .build();
     }
 
@@ -212,6 +214,7 @@ public class JdExtractionService {
         return RoleProfileDTO.builder()
                 .requiredSkills(normalizeRequiredSkills(Collections.emptyMap()))
                 .weights(getDefaultWeights())
+                .extractionSource("MOCK")
                 .build();
     }
 

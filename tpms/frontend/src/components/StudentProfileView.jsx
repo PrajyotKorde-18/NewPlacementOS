@@ -680,10 +680,21 @@ export default function StudentProfileView({ currentUser, onEditAcademic, onUplo
 
               {/* Extracted Technical Skills */}
               <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
-                <h4 className="text-sm font-bold font-heading text-slate-900 flex items-center space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#0E6E76]" />
-                  <span>Extracted Skills</span>
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold font-heading text-slate-900 flex items-center space-x-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#0E6E76]" />
+                    <span>Extracted Skills</span>
+                  </h4>
+                  {profile.extractionSource === 'MOCK' ? (
+                    <span className="text-xs bg-amber-100 border border-amber-300 text-amber-800 font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                      ⚠️ Mock data
+                    </span>
+                  ) : (
+                    <span className="text-xs bg-emerald-100 border border-emerald-300 text-emerald-800 font-medium px-2.5 py-0.5 rounded-full">
+                      LLM Extracted
+                    </span>
+                  )}
+                </div>
                 {profile.skills && profile.skills.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {profile.skills.map((skill, idx) => (

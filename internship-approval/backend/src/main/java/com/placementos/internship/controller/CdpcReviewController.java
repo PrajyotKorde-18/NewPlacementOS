@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/internships")
 @RequiredArgsConstructor
@@ -20,11 +23,13 @@ public class CdpcReviewController {
     private final CdpcReviewService cdpcReviewService;
 
     @GetMapping("/review-queue")
+    @PreAuthorize("hasAnyRole('CDPC_STAFF', 'CDPC_ADMIN')")
     public ResponseEntity<List<InternshipResponseDTO>> getReviewQueue() {
         return ResponseEntity.ok(cdpcReviewService.getReviewQueue());
     }
 
     @PostMapping("/{id}/approve")
+    @PreAuthorize("hasAnyRole('CDPC_STAFF', 'CDPC_ADMIN')")
     public ResponseEntity<InternshipResponseDTO> approveRequest(
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalRequestDTO dto
@@ -33,9 +38,10 @@ public class CdpcReviewController {
     }
 
     @PostMapping("/{id}/reject")
+    @PreAuthorize("hasAnyRole('CDPC_STAFF', 'CDPC_ADMIN')")
     public ResponseEntity<InternshipResponseDTO> rejectRequest(
             @PathVariable Long id,
-            @RequestBody RejectionRequestDTO dto
+            @Valid @RequestBody RejectionRequestDTO dto
     ) {
         String reason = dto != null ? dto.getRejectionReason() : null;
         return ResponseEntity.ok(cdpcReviewService.rejectRequest(id, reason));

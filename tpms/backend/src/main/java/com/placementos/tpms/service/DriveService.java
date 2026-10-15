@@ -304,6 +304,7 @@ public class DriveService {
             roleProfile.setMinTenthPercentage(dto.getMinTenthPercentage());
             roleProfile.setMinTwelfthPercentage(dto.getMinTwelfthPercentage());
             roleProfile.setMaxActiveBacklogs(dto.getMaxActiveBacklogs());
+            roleProfile.setExtractionSource(dto.getExtractionSource());
 
             roleProfileRepository.save(roleProfile);
         } catch (Exception e) {
@@ -332,6 +333,7 @@ public class DriveService {
                     .minTenthPercentage(roleProfile.getMinTenthPercentage())
                     .minTwelfthPercentage(roleProfile.getMinTwelfthPercentage())
                     .maxActiveBacklogs(roleProfile.getMaxActiveBacklogs())
+                    .extractionSource(roleProfile.getExtractionSource())
                     .build();
         } catch (Exception e) {
             log.error("Failed to parse RoleProfile JSON for drive ID {}", driveId, e);

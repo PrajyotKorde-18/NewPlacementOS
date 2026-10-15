@@ -250,9 +250,20 @@ export default function CreateDriveView({ currentUser, onDriveCreated }) {
                 <span className="text-xs font-bold uppercase text-[#0E6E76] tracking-wider">Preview Step</span>
                 <h3 className="text-xl font-bold font-heading text-slate-900">3. Classified Skills & Scoring Weights</h3>
               </div>
-              <span className="text-xs bg-teal-100 text-teal-800 font-semibold px-3 py-1 rounded-full">
-                Interactive Preview
-              </span>
+              <div className="flex items-center space-x-2">
+                {roleProfile.extractionSource === 'MOCK' ? (
+                  <span className="text-xs bg-amber-100 border border-amber-300 text-amber-800 font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                    ⚠️ Mock data
+                  </span>
+                ) : (
+                  <span className="text-xs bg-emerald-100 border border-emerald-300 text-emerald-800 font-semibold px-3 py-1 rounded-full">
+                    LLM Extracted
+                  </span>
+                )}
+                <span className="text-xs bg-teal-100 text-teal-800 font-semibold px-3 py-1 rounded-full">
+                  Interactive Preview
+                </span>
+              </div>
             </div>
 
             {/* Skill Bucket Chips */}

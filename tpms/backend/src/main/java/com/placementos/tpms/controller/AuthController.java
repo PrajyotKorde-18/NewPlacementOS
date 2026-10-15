@@ -17,6 +17,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import com.placementos.tpms.security.LoginRateLimiterService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -26,15 +32,21 @@ public class AuthController {
     private final StudentRepository studentRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private final LoginRateLimiterService loginRateLimiterService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+        loginRateLimiterService.checkLoginAllowed(request.getEmail());
+
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
 
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            loginRateLimiterService.recordFailedAttempt(request.getEmail());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid credentials"));
         }
+
+        loginRateLimiterService.recordSuccess(request.getEmail());
 
         String token = jwtUtils.generateToken(user.getEmail(), user.getRole());
         return ResponseEntity.ok(Map.of(
@@ -48,7 +60,7 @@ public class AuthController {
 
     @PostMapping("/register")
     @Transactional
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         if (!jwtUtils.isAllowedDomain(request.getEmail())) {
             return ResponseEntity.badRequest().body(Map.of("error", "Email domain not allowed. Must be @rknec.edu"));
         }
@@ -91,7 +103,11 @@ public class AuthController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class LoginRequest {
+        @NotBlank(message = "Email is required")
+        @Email(message = "Invalid email format")
         private String email;
+
+        @NotBlank(message = "Password is required")
         private String password;
     }
 
@@ -99,8 +115,16 @@ public class AuthController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class RegisterRequest {
+        @NotBlank(message = "Email is required")
+        @Email(message = "Invalid email format")
         private String email;
+
+        @NotBlank(message = "Password is required")
+        @Size(min = 6, message = "Password must be at least 6 characters")
         private String password;
+
+        @NotBlank(message = "Name is required")
+        @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
         private String name;
     }
 }

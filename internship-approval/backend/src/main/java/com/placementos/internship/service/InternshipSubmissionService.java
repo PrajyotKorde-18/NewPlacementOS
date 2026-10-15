@@ -21,7 +21,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class InternshipSubmissionService {
 
     private final InternshipRequestRepository requestRepository;
@@ -29,6 +28,34 @@ public class InternshipSubmissionService {
     private final com.placementos.internship.repository.UserRepository userRepository;
     private final RuleEvaluatorService ruleEvaluatorService;
     private final ScamPatternDetectorService scamPatternDetectorService;
+    private final com.placementos.internship.repository.NocRecordRepository nocRecordRepository;
+
+    public InternshipSubmissionService(
+            InternshipRequestRepository requestRepository,
+            StudentRepository studentRepository,
+            com.placementos.internship.repository.UserRepository userRepository,
+            RuleEvaluatorService ruleEvaluatorService,
+            ScamPatternDetectorService scamPatternDetectorService
+    ) {
+        this(requestRepository, studentRepository, userRepository, ruleEvaluatorService, scamPatternDetectorService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public InternshipSubmissionService(
+            InternshipRequestRepository requestRepository,
+            StudentRepository studentRepository,
+            com.placementos.internship.repository.UserRepository userRepository,
+            RuleEvaluatorService ruleEvaluatorService,
+            ScamPatternDetectorService scamPatternDetectorService,
+            com.placementos.internship.repository.NocRecordRepository nocRecordRepository
+    ) {
+        this.requestRepository = requestRepository;
+        this.studentRepository = studentRepository;
+        this.userRepository = userRepository;
+        this.ruleEvaluatorService = ruleEvaluatorService;
+        this.scamPatternDetectorService = scamPatternDetectorService;
+        this.nocRecordRepository = nocRecordRepository;
+    }
 
     private static final String UPLOAD_DIR = "uploads/offers/";
 
@@ -57,16 +84,27 @@ public class InternshipSubmissionService {
 
     @Transactional
     public InternshipResponseDTO submitOffer(InternshipSubmissionDTO dto, MultipartFile offerLetterFile) throws IOException {
+        if (dto.getStartDate() != null && dto.getEndDate() != null && dto.getEndDate().isBefore(dto.getStartDate())) {
+            throw new IllegalArgumentException("Internship end date cannot be before start date.");
+        }
+
         Student student = resolveStudent(dto.getStudentId());
 
         String pdfPath = null;
         String fileHash = null;
         if (offerLetterFile != null && !offerLetterFile.isEmpty()) {
+            com.placementos.internship.util.FileUploadValidator.validateFile(
+                    offerLetterFile,
+                    com.placementos.internship.util.FileUploadValidator.ALLOWED_OFFER_EXTENSIONS,
+                    com.placementos.internship.util.FileUploadValidator.DEFAULT_MAX_SIZE_BYTES
+            );
+
             File dir = new File(UPLOAD_DIR);
             if (!dir.exists()) {
                 dir.mkdirs();
             }
-            String fileName = UUID.randomUUID() + "_" + offerLetterFile.getOriginalFilename();
+            String sanitized = com.placementos.internship.util.FileUploadValidator.sanitizeFilename(offerLetterFile.getOriginalFilename());
+            String fileName = UUID.randomUUID() + "_" + sanitized;
             Path targetPath = Paths.get(UPLOAD_DIR + fileName);
             byte[] bytes = offerLetterFile.getBytes();
             Files.write(targetPath, bytes);
@@ -112,6 +150,9 @@ public class InternshipSubmissionService {
         // 4. Assign Intermediate Non-Terminal Status (Pending CDPC Human Review)
         if (!scamFlags.isEmpty()) {
             request.setStatus(InternshipRequestStatus.FLAGGED_FOR_REVIEW);
+        } else if (ruleResults.isEmpty()) {
+            request.setStatus(InternshipRequestStatus.FLAGGED_FOR_REVIEW);
+            request.setRejectionReason("no active policy rules configured");
         } else if (allRulesPassed) {
             request.setStatus(InternshipRequestStatus.RULE_APPROVED);
         } else {
@@ -137,6 +178,69 @@ public class InternshipSubmissionService {
         return requests.stream()
                 .map(req -> mapToResponseDTO(req, null, null))
                 .collect(Collectors.toList());
+    }
+
+    public byte[] downloadOfferLetter(Long requestId, java.security.Principal principal) throws IOException {
+        if (principal == null || principal.getName() == null) {
+            throw new com.placementos.internship.exception.AppException("Authentication required to access document", org.springframework.http.HttpStatus.UNAUTHORIZED);
+        }
+
+        InternshipRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Internship request not found with id: " + requestId));
+
+        User requester = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+
+        boolean isStaff = requester.getRole() == Role.CDPC_STAFF || requester.getRole() == Role.CDPC_ADMIN;
+        boolean isOwner = request.getStudent() != null
+                && request.getStudent().getUser() != null
+                && requester.getId().equals(request.getStudent().getUser().getId());
+
+        if (!isStaff && !isOwner) {
+            throw new com.placementos.internship.exception.AppException("Access denied: You do not have permission to download this offer letter", org.springframework.http.HttpStatus.FORBIDDEN);
+        }
+
+        if (request.getOfferLetterUrl() == null) {
+            throw new ResourceNotFoundException("No offer letter uploaded for this request");
+        }
+
+        Path path = Paths.get(request.getOfferLetterUrl());
+        if (!Files.exists(path)) {
+            throw new ResourceNotFoundException("Offer letter file not found on disk");
+        }
+
+        return Files.readAllBytes(path);
+    }
+
+    public byte[] downloadNocFile(Long requestId, java.security.Principal principal) throws IOException {
+        if (principal == null || principal.getName() == null) {
+            throw new com.placementos.internship.exception.AppException("Authentication required to access document", org.springframework.http.HttpStatus.UNAUTHORIZED);
+        }
+
+        InternshipRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Internship request not found with id: " + requestId));
+
+        User requester = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
+
+        boolean isStaff = requester.getRole() == Role.CDPC_STAFF || requester.getRole() == Role.CDPC_ADMIN;
+        boolean isOwner = request.getStudent() != null
+                && request.getStudent().getUser() != null
+                && requester.getId().equals(request.getStudent().getUser().getId());
+
+        if (!isStaff && !isOwner) {
+            throw new com.placementos.internship.exception.AppException("Access denied: You do not have permission to download this NOC document", org.springframework.http.HttpStatus.FORBIDDEN);
+        }
+
+        NocRecord noc = nocRecordRepository != null ? nocRecordRepository.findByRequestId(requestId).orElse(null) : null;
+        String pdfPath = noc != null ? noc.getPdfPath() : "uploads/noc/NOC_Request_" + requestId + ".pdf";
+
+        Path path = Paths.get(pdfPath);
+        if (!Files.exists(path)) {
+            throw new ResourceNotFoundException("NOC document not found on disk");
+        }
+
+        return Files.readAllBytes(path);
     }
 
     private InternshipResponseDTO mapToResponseDTO(InternshipRequest request,

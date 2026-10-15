@@ -21,4 +21,5 @@ public class ParsedResumeDTO {
     private String summary;
     private String achievements;
     private String rawText;
+    private String extractionSource; // "LLM" or "MOCK"
 }

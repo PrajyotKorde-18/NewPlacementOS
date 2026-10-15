@@ -15,9 +15,10 @@ public class UserController {
     private final UserService userService;
 
     @PutMapping("/{id}/role")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('CDPC_ADMIN')")
     public ResponseEntity<UserResponseDTO> updateUserRole(
             @PathVariable Long id,
-            @RequestBody UserRoleUpdateDTO dto
+            @jakarta.validation.Valid @RequestBody UserRoleUpdateDTO dto
     ) {
         return ResponseEntity.ok(userService.updateUserRole(id, dto.getRole()));
     }

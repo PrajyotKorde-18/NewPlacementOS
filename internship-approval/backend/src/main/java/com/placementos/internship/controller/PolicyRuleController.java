@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/policy-rules")
 @RequiredArgsConstructor
@@ -17,28 +20,33 @@ public class PolicyRuleController {
     private final PolicyRuleService policyRuleService;
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('CDPC_STAFF', 'CDPC_ADMIN')")
     public ResponseEntity<List<PolicyRuleDTO>> getAllRules() {
         return ResponseEntity.ok(policyRuleService.getAllRules());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CDPC_STAFF', 'CDPC_ADMIN')")
     public ResponseEntity<PolicyRuleDTO> getRuleById(@PathVariable Long id) {
         return ResponseEntity.ok(policyRuleService.getRuleById(id));
     }
 
     @PostMapping
-    public ResponseEntity<PolicyRuleDTO> createRule(@RequestBody PolicyRuleDTO dto) {
+    @PreAuthorize("hasRole('CDPC_ADMIN')")
+    public ResponseEntity<PolicyRuleDTO> createRule(@Valid @RequestBody PolicyRuleDTO dto) {
         PolicyRuleDTO created = policyRuleService.createRule(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PolicyRuleDTO> updateRule(@PathVariable Long id, @RequestBody PolicyRuleDTO dto) {
+    @PreAuthorize("hasRole('CDPC_ADMIN')")
+    public ResponseEntity<PolicyRuleDTO> updateRule(@PathVariable Long id, @Valid @RequestBody PolicyRuleDTO dto) {
         PolicyRuleDTO updated = policyRuleService.updateRule(id, dto);
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('CDPC_ADMIN')")
     public ResponseEntity<Void> deleteRule(@PathVariable Long id) {
         policyRuleService.deleteRule(id);
         return ResponseEntity.noContent().build();

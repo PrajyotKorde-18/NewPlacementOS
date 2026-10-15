@@ -30,4 +30,5 @@ public class RoleProfileDTO {
     private Double minTenthPercentage;
     private Double minTwelfthPercentage;
     private Integer maxActiveBacklogs;
+    private String extractionSource; // "LLM" or "MOCK"
 }
