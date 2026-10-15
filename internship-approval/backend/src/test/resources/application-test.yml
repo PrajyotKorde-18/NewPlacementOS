@@ -21,3 +21,6 @@ app:
   bootstrap:
     admin-email: admin@rknec.edu
     admin-password: TestAdmin@12345
+  policy:
+    default-min-stipend: 10000
+    default-min-duration-weeks: 6

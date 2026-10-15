@@ -6,17 +6,19 @@
     Validates:
       1. Student registrations (2 distinct students)
       2. Authentications (both students and CDPC Admin from environment variables)
-      3. Dynamic PDF generation on the fly
-      4. Submissions:
+      3. Verifies active policy rules via Admin endpoint; aborts if missing or inactive
+      4. Reads live rule thresholds to compute relative test parameters
+      5. Dynamic PDF generation on the fly
+      6. Submissions:
          - Clean offer (passes all rules -> RULE_APPROVED)
          - Gmail HR contact offer (free domain flag -> FLAGGED_FOR_REVIEW / HR_DOMAIN_MISMATCH)
-         - Low-stipend offer (stipend below threshold -> RULE_REJECTED / MINIMUM_STIPEND)
-         - Short-duration offer (duration below threshold -> RULE_REJECTED / MINIMUM_DURATION)
+         - Low-stipend offer (stipend below live threshold -> RULE_REJECTED / MINIMUM_STIPEND)
+         - Short-duration offer (duration below live threshold -> RULE_REJECTED / MINIMUM_DURATION)
          - Duplicate-PDF offer from second student (SHA-256 match -> FLAGGED_FOR_REVIEW / DUPLICATE_OFFER_LETTER_FILE)
-      5. Admin review queue listing
-      6. Admin approval & terminal state guard (second approval returns 409 Conflict)
-      7. Admin rejection with mandatory reason
-      8. RBAC security check (student cannot call admin action -> 403 Forbidden)
+      7. Admin review queue listing
+      8. Admin approval & terminal state guard (second approval returns 409 Conflict)
+      9. Admin rejection with mandatory reason
+      10. RBAC security check (student cannot call admin action -> 403 Forbidden)
 .PARAMETER BaseUrl
     Base URL for the Internship Approval API. Defaults to http://localhost:8082/api.
 .PARAMETER AdminEmail
@@ -34,7 +36,7 @@ param(
 
 $ErrorActionPreference = "Continue"
 
-# Add System.Net.Http for robust multipart form-data uploads
+# Add System.Net.Http for multipart form-data uploads
 Add-Type -AssemblyName System.Net.Http
 
 # Set default AdminEmail if omitted
@@ -82,6 +84,45 @@ function Record-Check {
         Details  = $Details
     })
     $script:checkCounter++
+}
+
+function Print-SummaryAndExit {
+    param(
+        [int]$ExitCode = 0
+    )
+    # Clean up generated temporary PDF directory
+    if (Test-Path $tempDir) {
+        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    Write-Host ""
+    Write-Host "==========================================================================================" -ForegroundColor Cyan
+    Write-Host "                       INTERNSHIP APPROVAL SMOKE TEST SUMMARY TABLE                       " -ForegroundColor Cyan
+    Write-Host "==========================================================================================" -ForegroundColor Cyan
+
+    $summaryTable = $results | ForEach-Object {
+        [PSCustomObject]@{
+            "#"        = $_.Index
+            "Check"    = $_.Name
+            "Expected" = $_.Expected
+            "Actual"   = $_.Actual
+            "Result"   = $_.Status
+        }
+    }
+    $summaryTable | Format-Table -AutoSize
+
+    $failedCount = ($results | Where-Object { $_.Status -eq "FAIL" }).Count
+    Write-Host "==========================================================================================" -ForegroundColor Cyan
+
+    if ($failedCount -eq 0 -and $ExitCode -eq 0) {
+        Write-Host ("  ALL CHECKS PASSED: {0}/{1} checks succeeded." -f $results.Count, $results.Count) -ForegroundColor Green
+        Write-Host "==========================================================================================" -ForegroundColor Cyan
+        exit 0
+    } else {
+        Write-Host ("  FAILURES DETECTED: {0}/{1} checks failed." -f $failedCount, $results.Count) -ForegroundColor Red
+        Write-Host "==========================================================================================" -ForegroundColor Cyan
+        exit 1
+    }
 }
 
 function Invoke-ApiJson {
@@ -259,7 +300,13 @@ try {
     }
     $tokenStu1 = $loginStu1.Data.token
     $user1Id   = $loginStu1.Data.id
-    Record-Check -Name "Login Student 1" -Expected "200 OK & Role STUDENT" -Actual "$($loginStu1.StatusCode) & Role $($loginStu1.Data.role)" -Passed ($loginStu1.StatusCode -eq 200 -and $loginStu1.Data.role -eq "STUDENT" -and [string]::IsNullOrWhiteSpace($tokenStu1) -eq $false)
+    $stu1LoginOk = ($loginStu1.StatusCode -eq 200 -and $loginStu1.Data.role -eq "STUDENT" -and [string]::IsNullOrWhiteSpace($tokenStu1) -eq $false)
+    Record-Check -Name "Login Student 1" -Expected "200 OK & Role STUDENT" -Actual "$($loginStu1.StatusCode) & Role $($loginStu1.Data.role)" -Passed $stu1LoginOk
+
+    if (-not $stu1LoginOk) {
+        Write-Host "[FATAL ERROR] Student 1 login failed. Aborting smoke test." -ForegroundColor Red
+        Print-SummaryAndExit -ExitCode 1
+    }
 
     $loginStu2 = Invoke-ApiJson -Url "$BaseUrl/auth/login" -Method "POST" -Body @{
         email    = $student2Email
@@ -267,44 +314,77 @@ try {
     }
     $tokenStu2 = $loginStu2.Data.token
     $user2Id   = $loginStu2.Data.id
-    Record-Check -Name "Login Student 2" -Expected "200 OK & Role STUDENT" -Actual "$($loginStu2.StatusCode) & Role $($loginStu2.Data.role)" -Passed ($loginStu2.StatusCode -eq 200 -and $loginStu2.Data.role -eq "STUDENT" -and [string]::IsNullOrWhiteSpace($tokenStu2) -eq $false)
+    $stu2LoginOk = ($loginStu2.StatusCode -eq 200 -and $loginStu2.Data.role -eq "STUDENT" -and [string]::IsNullOrWhiteSpace($tokenStu2) -eq $false)
+    Record-Check -Name "Login Student 2" -Expected "200 OK & Role STUDENT" -Actual "$($loginStu2.StatusCode) & Role $($loginStu2.Data.role)" -Passed $stu2LoginOk
+
+    if (-not $stu2LoginOk) {
+        Write-Host "[FATAL ERROR] Student 2 login failed. Aborting smoke test." -ForegroundColor Red
+        Print-SummaryAndExit -ExitCode 1
+    }
 
     $loginAdmin = Invoke-ApiJson -Url "$BaseUrl/auth/login" -Method "POST" -Body @{
         email    = $AdminEmail
         password = $AdminPassword
     }
     $tokenAdmin = $loginAdmin.Data.token
-    Record-Check -Name "Login CDPC Admin" -Expected "200 OK & Role CDPC_ADMIN" -Actual "$($loginAdmin.StatusCode) & Role $($loginAdmin.Data.role)" -Passed ($loginAdmin.StatusCode -eq 200 -and $loginAdmin.Data.role -eq "CDPC_ADMIN" -and [string]::IsNullOrWhiteSpace($tokenAdmin) -eq $false)
+    $adminLoginOk = ($loginAdmin.StatusCode -eq 200 -and $loginAdmin.Data.role -eq "CDPC_ADMIN" -and [string]::IsNullOrWhiteSpace($tokenAdmin) -eq $false)
+    Record-Check -Name "Login CDPC Admin" -Expected "200 OK & Role CDPC_ADMIN" -Actual "$($loginAdmin.StatusCode) & Role $($loginAdmin.Data.role)" -Passed $adminLoginOk
 
-    # Step 3: Ensure Policy Rules Exist (MINIMUM_STIPEND >= 10000, MINIMUM_DURATION >= 6)
-    Write-Host "Step 3: Checking / Initializing Active Policy Rules..." -ForegroundColor Yellow
+    # Requirement 3(b): If admin login fails, stop immediately with a clear message instead of continuing
+    if (-not $adminLoginOk) {
+        Write-Host ""
+        Write-Host "[FATAL ERROR] CDPC Admin login failed (HTTP $($loginAdmin.StatusCode))." -ForegroundColor Red
+        Write-Host "Response error detail: $($loginAdmin.RawBody)" -ForegroundColor Yellow
+        Write-Host "Verify the backend was started with BOOTSTRAP_ADMIN_PASSWORD environment variable set and matching the password provided." -ForegroundColor Yellow
+        Write-Host "Aborting smoke test immediately because subsequent review and policy checks require admin authorization." -ForegroundColor Red
+        Print-SummaryAndExit -ExitCode 1
+    }
+
+    # Step 3: Query Policy Rules via Admin Endpoint
+    # Requirement 3(a): Must call admin endpoint with valid admin token and fail if either rule is missing or inactive
+    Write-Host "Step 3: Validating Active Policy Rules via Admin Endpoint..." -ForegroundColor Yellow
     $rulesReq = Invoke-ApiJson -Url "$BaseUrl/policy-rules" -Method "GET" -Token $tokenAdmin
     $rulesList = if ($rulesReq.Data) { @($rulesReq.Data) } else { @() }
 
-    $hasStipendRule = $rulesList | Where-Object { $_.ruleName -eq "MINIMUM_STIPEND" -and $_.isActive -eq $true }
-    if (-not $hasStipendRule) {
-        $stipendRuleCreate = Invoke-ApiJson -Url "$BaseUrl/policy-rules" -Method "POST" -Token $tokenAdmin -Body @{
-            ruleName    = "MINIMUM_STIPEND"
-            label       = "Minimum Monthly Stipend"
-            ruleType    = "STIPEND"
-            ruleValue   = "10000"
-            isActive    = $true
-            description = "Mandatory institutional minimum stipend of 10,000 INR"
-        }
+    $stipendRule = $rulesList | Where-Object { $_.ruleName -eq "MINIMUM_STIPEND" -and $_.isActive -eq $true } | Select-Object -First 1
+    $durationRule = $rulesList | Where-Object { $_.ruleName -eq "MINIMUM_DURATION" -and $_.isActive -eq $true } | Select-Object -First 1
+
+    $hasStipendRule = ($null -ne $stipendRule)
+    $hasDurationRule = ($null -ne $durationRule)
+    $policyRulesConfigured = ($rulesReq.StatusCode -eq 200 -and $hasStipendRule -and $hasDurationRule)
+
+    $actualRulesDesc = "Stipend Rule: $(if ($hasStipendRule) { "Active ($($stipendRule.ruleValue))" } else { "MISSING/INACTIVE" }), Duration Rule: $(if ($hasDurationRule) { "Active ($($durationRule.ruleValue)w)" } else { "MISSING/INACTIVE" })"
+    Record-Check -Name "Verify Policy Rules Configured" -Expected "MINIMUM_STIPEND & MINIMUM_DURATION both present and active" -Actual $actualRulesDesc -Passed $policyRulesConfigured
+
+    if (-not $policyRulesConfigured) {
+        Write-Host ""
+        Write-Host "[FATAL ERROR] Required policy rules are not active in the database." -ForegroundColor Red
+        Write-Host "HTTP Status: $($rulesReq.StatusCode) | Stipend Active: $hasStipendRule | Duration Active: $hasDurationRule" -ForegroundColor Yellow
+        Write-Host "Ensure the backend has seeded default policy rules on startup." -ForegroundColor Yellow
+        Print-SummaryAndExit -ExitCode 1
     }
 
-    $hasDurationRule = $rulesList | Where-Object { $_.ruleName -eq "MINIMUM_DURATION" -and $_.isActive -eq $true }
-    if (-not $hasDurationRule) {
-        $durationRuleCreate = Invoke-ApiJson -Url "$BaseUrl/policy-rules" -Method "POST" -Token $tokenAdmin -Body @{
-            ruleName    = "MINIMUM_DURATION"
-            label       = "Minimum Internship Duration"
-            ruleType    = "DURATION"
-            ruleValue   = "6"
-            isActive    = $true
-            description = "Mandatory institutional minimum duration of 6 weeks"
-        }
-    }
-    Record-Check -Name "Verify Policy Rules Configured" -Expected "MINIMUM_STIPEND & MINIMUM_DURATION active" -Actual "Configured" -Passed $true
+    # Requirement 3(c): Read stipend and duration thresholds from live rules and choose test values relative to them
+    $thresholdStipend  = [decimal]$stipendRule.ruleValue
+    $thresholdDuration = [int]$durationRule.ruleValue
+    Write-Host ("  Detected live policy thresholds: Min Stipend = INR {0:N0}, Min Duration = {1} weeks" -f $thresholdStipend, $thresholdDuration) -ForegroundColor Cyan
+
+    $cleanStipend    = $thresholdStipend + 15000
+    $cleanDuration   = $thresholdDuration + 4
+
+    $gmailStipend    = $thresholdStipend + 5000
+    $gmailDuration   = $thresholdDuration + 2
+
+    # Low-stipend: strictly below threshold, but duration is valid
+    $lowStipendVal   = if ($thresholdStipend -gt 2000) { $thresholdStipend - 2000 } else { [decimal]0 }
+    $lowStipendDur   = $thresholdDuration + 2
+
+    # Short-duration: strictly below threshold, but stipend is valid
+    $shortDurVal     = if ($thresholdDuration -gt 2) { $thresholdDuration - 2 } else { 1 }
+    $shortDurStipend = $thresholdStipend + 10000
+
+    $dupStipend      = $thresholdStipend + 5000
+    $dupDuration     = $thresholdDuration + 2
 
     # Step 4: Generate Small Test PDFs on the fly
     Write-Host "Step 4: Generating Dynamic Test PDFs..." -ForegroundColor Yellow
@@ -322,34 +402,34 @@ try {
     Record-Check -Name "Generate Test PDFs on the fly" -Expected "4 distinct test PDF files" -Actual "Files generated in temp" -Passed $pdfsGenerated
 
     # Step 5: Submissions by Students
-    Write-Host "Step 5: Executing Offer Submissions..." -ForegroundColor Yellow
+    Write-Host "Step 5: Executing Offer Submissions with Relative Thresholds..." -ForegroundColor Yellow
 
     # 5a. Clean Offer (Student 1) -> Expected: RULE_APPROVED
     $cleanSubmission = @{
         studentId      = $user1Id
         companyName    = "CleanTech Alpha $timestamp"
         roleTitle      = "Software Engineer Intern"
-        durationWeeks  = 12
-        stipend        = 45000
+        durationWeeks  = $cleanDuration
+        stipend        = $cleanStipend
         startDate      = (Get-Date).AddMonths(1).ToString("yyyy-MM-dd")
-        endDate        = (Get-Date).AddMonths(4).ToString("yyyy-MM-dd")
+        endDate        = (Get-Date).AddMonths(1).AddDays($cleanDuration * 7).ToString("yyyy-MM-dd")
         mode           = "ON_SITE"
         hrContactEmail = "campus@cleantech-alpha.com"
     }
     $resClean = Invoke-ApiMultipart -Url "$BaseUrl/internships/submit" -Token $tokenStu1 -Data $cleanSubmission -FilePath $pdfClean
     $cleanOfferId = $resClean.Data.id
     $cleanStatus  = $resClean.Data.status
-    Record-Check -Name "Submit Clean Offer" -Expected "RULE_APPROVED" -Actual "$cleanStatus (ID: $cleanOfferId)" -Passed ($cleanStatus -eq "RULE_APPROVED")
+    Record-Check -Name "Submit Clean Offer" -Expected "RULE_APPROVED" -Actual "$cleanStatus (ID: $cleanOfferId, Stipend: $cleanStipend, Dur: ${cleanDuration}w)" -Passed ($cleanStatus -eq "RULE_APPROVED")
 
     # 5b. Gmail HR-Contact Offer (Student 1) -> Expected: FLAGGED_FOR_REVIEW with HR_DOMAIN_MISMATCH
     $gmailSubmission = @{
         studentId      = $user1Id
         companyName    = "Freelance Studio Beta $timestamp"
         roleTitle      = "Frontend Developer Intern"
-        durationWeeks  = 10
-        stipend        = 35000
+        durationWeeks  = $gmailDuration
+        stipend        = $gmailStipend
         startDate      = (Get-Date).AddMonths(1).ToString("yyyy-MM-dd")
-        endDate        = (Get-Date).AddMonths(3).ToString("yyyy-MM-dd")
+        endDate        = (Get-Date).AddMonths(1).AddDays($gmailDuration * 7).ToString("yyyy-MM-dd")
         mode           = "REMOTE"
         hrContactEmail = "recruiter.freelance@gmail.com"
     }
@@ -364,44 +444,44 @@ try {
         studentId      = $user1Id
         companyName    = "Budget Workshop Gamma $timestamp"
         roleTitle      = "Quality Assurance Intern"
-        durationWeeks  = 8
-        stipend        = 2000
+        durationWeeks  = $lowStipendDur
+        stipend        = $lowStipendVal
         startDate      = (Get-Date).AddMonths(1).ToString("yyyy-MM-dd")
-        endDate        = (Get-Date).AddMonths(3).ToString("yyyy-MM-dd")
+        endDate        = (Get-Date).AddMonths(1).AddDays($lowStipendDur * 7).ToString("yyyy-MM-dd")
         mode           = "HYBRID"
         hrContactEmail = "hr@budgetworkshop.org"
     }
     $resLowStipend = Invoke-ApiMultipart -Url "$BaseUrl/internships/submit" -Token $tokenStu1 -Data $lowStipendSubmission -FilePath $pdfLowStipend
     $lowStipendOfferId = $resLowStipend.Data.id
     $lowStipendStatus  = $resLowStipend.Data.status
-    Record-Check -Name "Submit Low-Stipend Offer" -Expected "RULE_REJECTED" -Actual "$lowStipendStatus (ID: $lowStipendOfferId)" -Passed ($lowStipendStatus -eq "RULE_REJECTED")
+    Record-Check -Name "Submit Low-Stipend Offer" -Expected "RULE_REJECTED" -Actual "$lowStipendStatus (ID: $lowStipendOfferId, Stipend: $lowStipendVal < $thresholdStipend)" -Passed ($lowStipendStatus -eq "RULE_REJECTED")
 
     # 5d. Short-Duration Offer (Student 1) -> Expected: RULE_REJECTED
     $shortDurSubmission = @{
         studentId      = $user1Id
         companyName    = "Speedy Consulting Delta $timestamp"
         roleTitle      = "Junior Research Intern"
-        durationWeeks  = 2
-        stipend        = 25000
+        durationWeeks  = $shortDurVal
+        stipend        = $shortDurStipend
         startDate      = (Get-Date).AddMonths(1).ToString("yyyy-MM-dd")
-        endDate        = (Get-Date).AddMonths(1).AddDays(14).ToString("yyyy-MM-dd")
+        endDate        = (Get-Date).AddMonths(1).AddDays($shortDurVal * 7).ToString("yyyy-MM-dd")
         mode           = "ON_SITE"
         hrContactEmail = "hr@speedyconsulting.com"
     }
     $resShortDur = Invoke-ApiMultipart -Url "$BaseUrl/internships/submit" -Token $tokenStu1 -Data $shortDurSubmission -FilePath $pdfShortDur
     $shortDurOfferId = $resShortDur.Data.id
     $shortDurStatus  = $resShortDur.Data.status
-    Record-Check -Name "Submit Short-Duration Offer" -Expected "RULE_REJECTED" -Actual "$shortDurStatus (ID: $shortDurOfferId)" -Passed ($shortDurStatus -eq "RULE_REJECTED")
+    Record-Check -Name "Submit Short-Duration Offer" -Expected "RULE_REJECTED" -Actual "$shortDurStatus (ID: $shortDurOfferId, Dur: ${shortDurVal}w < ${thresholdDuration}w)" -Passed ($shortDurStatus -eq "RULE_REJECTED")
 
     # 5e. Duplicate-PDF Offer (Student 2 reusing Student 1's PDF file bytes) -> Expected: FLAGGED_FOR_REVIEW with DUPLICATE_OFFER_LETTER_FILE
     $duplicatePdfSubmission = @{
         studentId      = $user2Id
         companyName    = "Independent Labs Epsilon $timestamp"
         roleTitle      = "Backend Systems Intern"
-        durationWeeks  = 10
-        stipend        = 40000
+        durationWeeks  = $dupDuration
+        stipend        = $dupStipend
         startDate      = (Get-Date).AddMonths(1).ToString("yyyy-MM-dd")
-        endDate        = (Get-Date).AddMonths(3).ToString("yyyy-MM-dd")
+        endDate        = (Get-Date).AddMonths(1).AddDays($dupDuration * 7).ToString("yyyy-MM-dd")
         mode           = "ON_SITE"
         hrContactEmail = "recruitment@independentlabs.com"
     }
@@ -451,39 +531,11 @@ try {
     $hasDeniedMsg   = ($studentTamperReq.RawBody -like "*Access denied*" -or $studentTamperReq.RawBody -like "*Forbidden*")
     Record-Check -Name "Student Blocked from Admin Endpoint" -Expected "HTTP 403 Forbidden" -Actual "HTTP $($studentTamperReq.StatusCode)" -Passed ($is403Forbidden -and $hasDeniedMsg)
 
-} finally {
-    # Clean up generated temporary PDF directory
-    if (Test-Path $tempDir) {
-        Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-    }
-}
+    # Print Final Summary and Exit 0
+    Print-SummaryAndExit -ExitCode 0
 
-# Print Clean PASS/FAIL Table
-Write-Host ""
-Write-Host "==========================================================================================" -ForegroundColor Cyan
-Write-Host "                       INTERNSHIP APPROVAL SMOKE TEST SUMMARY TABLE                       " -ForegroundColor Cyan
-Write-Host "==========================================================================================" -ForegroundColor Cyan
-
-$summaryTable = $results | ForEach-Object {
-    [PSCustomObject]@{
-        "#"        = $_.Index
-        "Check"    = $_.Name
-        "Expected" = $_.Expected
-        "Actual"   = $_.Actual
-        "Result"   = $_.Status
-    }
-}
-$summaryTable | Format-Table -AutoSize
-
-$failedCount = ($results | Where-Object { $_.Status -eq "FAIL" }).Count
-Write-Host "==========================================================================================" -ForegroundColor Cyan
-
-if ($failedCount -eq 0) {
-    Write-Host ("  ALL CHECKS PASSED: {0}/{1} checks succeeded." -f $results.Count, $results.Count) -ForegroundColor Green
-    Write-Host "==========================================================================================" -ForegroundColor Cyan
-    exit 0
-} else {
-    Write-Host ("  FAILURES DETECTED: {0}/{1} checks failed." -f $failedCount, $results.Count) -ForegroundColor Red
-    Write-Host "==========================================================================================" -ForegroundColor Cyan
-    exit 1
+} catch {
+    Write-Host ""
+    Write-Host "[UNEXPECTED ERROR] An unhandled script exception occurred: $($_.Exception.Message)" -ForegroundColor Red
+    Print-SummaryAndExit -ExitCode 1
 }

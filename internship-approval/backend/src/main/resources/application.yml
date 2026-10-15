@@ -30,6 +30,9 @@ app:
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
     admin-name: ${BOOTSTRAP_ADMIN_NAME:System CDPC Admin}
     admin-college-id: ${BOOTSTRAP_ADMIN_COLLEGE_ID:ADMIN001}
+  policy:
+    default-min-stipend: ${DEFAULT_MIN_STIPEND:10000}
+    default-min-duration-weeks: ${DEFAULT_MIN_DURATION_WEEKS:6}
 
 logging:
   level:
