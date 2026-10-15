@@ -55,10 +55,6 @@ class ResumeServiceTest {
             if (rv.getId() == null) rv.setId(1L);
             return rv;
         });
-        when(resumeVersionRepository.findById(1L)).thenReturn(Optional.of(
-                ResumeVersion.builder().id(1L).student(testStudent).extractionStatus(ExtractionStatus.PENDING).build()
-        ));
-
         MockMultipartFile mockFile = new MockMultipartFile("file", "resume.pdf", "application/pdf", "%PDF-1.4\ndummy resume content".getBytes());
 
         ResumeUploadResponse response = resumeService.uploadResume(10L, mockFile);
@@ -68,7 +64,7 @@ class ResumeServiceTest {
         assertEquals(10L, response.getStudentId());
         assertEquals(1L, response.getResumeId());
 
-        // Verify sync processor trigger
-        verify(asyncResumeProcessor, times(1)).processResumeSync(1L);
+        // Verify async processor trigger
+        verify(asyncResumeProcessor, times(1)).processResumeAsync(1L);
     }
 }

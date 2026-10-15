@@ -77,6 +77,13 @@ public class DocumentAccessAndValidationTest {
                 .role("COORDINATOR")
                 .build());
 
+        userRepository.save(User.builder()
+                .name("Admin User")
+                .email("admin@rknec.edu")
+                .password("encoded_pass")
+                .role("ADMIN")
+                .build());
+
         // Create temporary PDF file for download testing
         File tempDir = new File("uploads/resumes/");
         if (!tempDir.exists()) {
@@ -118,6 +125,13 @@ public class DocumentAccessAndValidationTest {
     @Test
     @WithMockUser(username = "charlie.coord@rknec.edu", roles = {"COORDINATOR"})
     void testResumeDownload_Coordinator_ReturnsOk() throws Exception {
+        mockMvc.perform(get("/resumes/" + testResume.getId() + "/download"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@rknec.edu", roles = {"ADMIN"})
+    void testResumeDownload_Admin_ReturnsOk() throws Exception {
         mockMvc.perform(get("/resumes/" + testResume.getId() + "/download"))
                 .andExpect(status().isOk());
     }

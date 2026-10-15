@@ -32,7 +32,7 @@ public class AsyncResumeProcessor {
         processResume(resumeVersionId);
     }
 
-    @Async
+    @Async("resumeTaskExecutor")
     public void processResumeAsync(Long resumeVersionId) {
         processResume(resumeVersionId);
     }
@@ -47,6 +47,10 @@ public class AsyncResumeProcessor {
             return;
         }
 
+        // 1. Transition state from PENDING to PROCESSING
+        resumeVersion.setExtractionStatus(ExtractionStatus.PROCESSING);
+        resumeVersion = resumeVersionRepository.saveAndFlush(resumeVersion);
+
         try {
             File pdfFile = new File(resumeVersion.getFilePath());
             String rawText = pdfParserService.extractTextFromPdf(pdfFile);
@@ -56,10 +60,10 @@ public class AsyncResumeProcessor {
 
             ExtractionStatus status = determineStatus(parsedDTO);
 
-            // 1. Save student profile (throws Exception on JSON serialization or DB error)
+            // Save student profile (throws Exception on JSON serialization or DB error)
             updateStudentProfile(resumeVersion.getStudent(), parsedDTO);
 
-            // 2. Only if profile write succeeds, update resume version status to PROCESSED / FLAGGED_FOR_REVIEW
+            // 2. Only if profile write succeeds, update resume version status to COMPLETED / FLAGGED_FOR_REVIEW
             resumeVersion.setExtractionStatus(status);
             resumeVersion.setExtractionSource(parsedDTO.getExtractionSource());
             if (status == ExtractionStatus.FLAGGED_FOR_REVIEW) {
@@ -84,7 +88,7 @@ public class AsyncResumeProcessor {
         if (dto.getSkills().isEmpty() && dto.getProjects().isEmpty() && dto.getInternships().isEmpty()) {
             return ExtractionStatus.FLAGGED_FOR_REVIEW;
         }
-        return ExtractionStatus.PROCESSED;
+        return ExtractionStatus.COMPLETED;
     }
 
     private void updateStudentProfile(Student studentRef, ParsedResumeDTO parsedDTO) throws Exception {
@@ -93,9 +97,15 @@ public class AsyncResumeProcessor {
                 .orElse(studentRef);
 
         StudentProfile profile = studentProfileRepository.findByStudentId(studentId)
-                .orElseGet(() -> StudentProfile.builder()
-                        .student(student)
-                        .build());
+                .orElseGet(() -> {
+                    StudentProfile p = StudentProfile.builder()
+                            .student(student)
+                            .studentId(student.getId())
+                            .isNewEntity(false)
+                            .build();
+                    p.setStudent(student);
+                    return p;
+                });
 
         profile.setStudent(student);
         profile.setSkills(objectMapper.writeValueAsString(parsedDTO.getSkills()));

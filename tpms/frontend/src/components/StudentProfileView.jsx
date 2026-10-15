@@ -75,28 +75,29 @@ export default function StudentProfileView({ currentUser, onEditAcademic, onUplo
   // Poll resume extraction status
   useEffect(() => {
     let interval = null;
-    if (versionId && extractionStatus === 'PENDING') {
+    if (versionId && (extractionStatus === 'PENDING' || extractionStatus === 'PROCESSING')) {
       interval = setInterval(async () => {
         try {
           const statusRes = await api.getResumeStatus(versionId);
-          setExtractionStatus(statusRes.extractionStatus);
-          if (statusRes.extractionStatus === 'PROCESSED') {
+          const currentStatus = statusRes.extractionStatus;
+          setExtractionStatus(currentStatus);
+          if (currentStatus === 'COMPLETED' || currentStatus === 'PROCESSED') {
             clearInterval(interval);
             setUploading(false);
             setSuccessMsg('Resume parsed successfully! Extracted data updated.');
             fetchProfile();
-          } else if (statusRes.extractionStatus === 'FLAGGED_FOR_REVIEW') {
+          } else if (currentStatus === 'FLAGGED_FOR_REVIEW') {
             clearInterval(interval);
             setUploading(false);
             setError('Extraction Flagged for Review: Could not extract sufficient structured data.');
             fetchProfile();
-          } else if (statusRes.extractionStatus === 'FAILED') {
+          } else if (currentStatus === 'FAILED') {
             clearInterval(interval);
             setUploading(false);
             setError(`Resume extraction failed: ${statusRes.errorLog || 'Unknown error'}`);
           }
         } catch (err) {
-          console.error(err);
+          console.error('Error fetching resume status:', err);
         }
       }, 1500);
     }

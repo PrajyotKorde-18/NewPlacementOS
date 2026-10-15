@@ -105,6 +105,15 @@ public class DocumentAccessAndValidationTest {
                 .offerLetterUrl(offerPdf.getPath())
                 .status(InternshipRequestStatus.RULE_APPROVED)
                 .build());
+
+        File nocDir = new File("uploads/noc/");
+        if (!nocDir.exists()) {
+            nocDir.mkdirs();
+        }
+        File nocPdf = new File(nocDir, "NOC_Request_" + testRequest.getId() + ".pdf");
+        try (FileOutputStream fos = new FileOutputStream(nocPdf)) {
+            fos.write("%PDF-1.4 test noc content".getBytes());
+        }
     }
 
     @Test
@@ -131,6 +140,40 @@ public class DocumentAccessAndValidationTest {
     @WithMockUser(username = "staff@rknec.edu", roles = {"CDPC_STAFF"})
     void testOfferLetterDownload_CdpcStaff_ReturnsOk() throws Exception {
         mockMvc.perform(get("/internships/" + testRequest.getId() + "/offer-letter"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void testNocFileDownload_LoggedOut_ReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/internships/" + testRequest.getId() + "/noc-file"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "bob@rknec.edu", roles = {"STUDENT"})
+    void testNocFileDownload_StrangerStudent_ReturnsForbidden() throws Exception {
+        mockMvc.perform(get("/internships/" + testRequest.getId() + "/noc-file"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "alice@rknec.edu", roles = {"STUDENT"})
+    void testNocFileDownload_OwnerStudent_ReturnsOk() throws Exception {
+        mockMvc.perform(get("/internships/" + testRequest.getId() + "/noc-file"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "staff@rknec.edu", roles = {"CDPC_STAFF"})
+    void testNocFileDownload_CdpcStaff_ReturnsOk() throws Exception {
+        mockMvc.perform(get("/internships/" + testRequest.getId() + "/noc-file"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "admin@rknec.edu", roles = {"CDPC_ADMIN"})
+    void testNocFileDownload_CdpcAdmin_ReturnsOk() throws Exception {
+        mockMvc.perform(get("/internships/" + testRequest.getId() + "/noc-file"))
                 .andExpect(status().isOk());
     }
 

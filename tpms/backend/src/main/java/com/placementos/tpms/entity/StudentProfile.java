@@ -20,7 +20,7 @@ public class StudentProfile implements Persistable<Long> {
     @Column(name = "student_id")
     private Long studentId;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @MapsId
     @JoinColumn(name = "student_id")
     private Student student;

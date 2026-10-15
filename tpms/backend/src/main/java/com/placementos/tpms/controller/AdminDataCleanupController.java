@@ -52,9 +52,27 @@ public class AdminDataCleanupController {
         this.entityManager = entityManager;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${app.admin.cleanup-enabled:false}")
+    private boolean cleanupEnabled;
+
+    public void setCleanupEnabled(boolean cleanupEnabled) {
+        this.cleanupEnabled = cleanupEnabled;
+    }
+
+    public boolean isCleanupEnabled() {
+        return cleanupEnabled;
+    }
+
     @PostMapping("/cleanup")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public ResponseEntity<?> cleanupAllData() {
+        if (!cleanupEnabled) {
+            throw new com.placementos.tpms.exception.AppException(
+                    "Administrative data cleanup is disabled in this environment.",
+                    org.springframework.http.HttpStatus.FORBIDDEN
+            );
+        }
         log.warn("[ADMIN CLEANUP] Purging all student entries and placement company drives from database...");
 
         long appCount = applicationRepository.count();
@@ -65,9 +83,6 @@ public class AdminDataCleanupController {
         long studentCount = studentRepository.count();
         List<User> studentUsers = userRepository.findByRole("STUDENT");
         int userCount = studentUsers.size();
-
-        // 1. Disable FK checks temporarily for bulk purge safety
-        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
 
         // 2. Delete child tables in reverse dependency order
         entityManager.createNativeQuery("DELETE FROM applications").executeUpdate();
@@ -81,9 +96,6 @@ public class AdminDataCleanupController {
         entityManager.createNativeQuery("DELETE FROM resume_versions").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM students").executeUpdate();
         entityManager.createNativeQuery("DELETE FROM users WHERE role = 'STUDENT'").executeUpdate();
-
-        // 3. Re-enable FK checks
-        entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
 
         // 4. If running in demo profile, restore pristine verified demo student accounts
         demoAccountSeeder.ifPresent(seeder -> {

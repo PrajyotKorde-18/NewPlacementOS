@@ -55,6 +55,9 @@ public class FrontendFlowIntegrationTest {
     @Autowired
     private ApplicationRepository applicationRepository;
 
+    @Autowired
+    private java.util.Optional<com.placementos.tpms.config.DemoAccountSeeder> demoAccountSeeder;
+
     private User demoStudentUser;
     private Student demoStudent;
     private Drive testDrive;
@@ -62,6 +65,10 @@ public class FrontendFlowIntegrationTest {
     @BeforeEach
     void setUp() {
         demoStudentUser = userRepository.findByEmail("candidate.student@rknec.edu").orElse(null);
+        if (demoStudentUser == null) {
+            demoAccountSeeder.ifPresent(com.placementos.tpms.config.DemoAccountSeeder::seedDemoAccounts);
+            demoStudentUser = userRepository.findByEmail("candidate.student@rknec.edu").orElse(null);
+        }
         if (demoStudentUser != null) {
             demoStudent = studentRepository.findByUserId(demoStudentUser.getId()).orElse(null);
         }

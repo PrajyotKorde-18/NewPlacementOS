@@ -15,10 +15,18 @@
          - Low-stipend offer (stipend below live threshold -> RULE_REJECTED / MINIMUM_STIPEND)
          - Short-duration offer (duration below live threshold -> RULE_REJECTED / MINIMUM_DURATION)
          - Duplicate-PDF offer from second student (SHA-256 match -> FLAGGED_FOR_REVIEW / DUPLICATE_OFFER_LETTER_FILE)
-      7. Admin review queue listing
-      8. Admin approval & terminal state guard (second approval returns 409 Conflict)
-      9. Admin rejection with mandatory reason
-      10. RBAC security check (student cannot call admin action -> 403 Forbidden)
+      7. Offer letter document access controls:
+         - Owner student downloads own offer letter (HTTP 200)
+         - Second student denied access (HTTP 403 Forbidden)
+         - Logged-out request denied (HTTP 401 Unauthorized)
+      8. Admin review queue listing
+      9. Admin approval & terminal state guard (second approval returns 409 Conflict)
+      10. Approved NOC document access controls:
+         - Owner student downloads own NOC file (HTTP 200)
+         - Second student denied access (HTTP 403 Forbidden)
+         - Logged-out request denied (HTTP 401 Unauthorized)
+      11. Admin rejection with mandatory reason
+      12. RBAC security check (student cannot call admin action -> 403 Forbidden)
 .PARAMETER BaseUrl
     Base URL for the Internship Approval API. Defaults to http://localhost:8082/api.
 .PARAMETER AdminEmail
@@ -44,15 +52,23 @@ if ([string]::IsNullOrWhiteSpace($AdminEmail)) {
     $AdminEmail = "admin@rknec.edu"
 }
 
-# Ensure AdminPassword is provided via environment
+# Set default AdminPassword from demo profile if omitted
 if ([string]::IsNullOrWhiteSpace($AdminPassword)) {
-    Write-Host ""
-    Write-Host "[ERROR] CDPC Admin password environment variable (BOOTSTRAP_ADMIN_PASSWORD) is missing." -ForegroundColor Red
-    Write-Host "Set the variable in your environment before running this smoke test, for example:" -ForegroundColor Yellow
-    Write-Host '  $env:BOOTSTRAP_ADMIN_PASSWORD = "<your_admin_password>"' -ForegroundColor Yellow
-    Write-Host "  .\smoke-test.ps1" -ForegroundColor Yellow
-    Write-Host ""
-    exit 1
+    $demoYml = Join-Path $PSScriptRoot "backend\src\main\resources\application-demo.yml"
+    if (Test-Path $demoYml) {
+        $lines = Get-Content $demoYml
+        $foundAdmin = $false
+        foreach ($line in $lines) {
+            if ($line -match "email:\s*admin@rknec\.edu") { $foundAdmin = $true }
+            if ($foundAdmin -and $line -match "password:\s*(\S+)") {
+                $AdminPassword = $matches[1]
+                break
+            }
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($AdminPassword)) {
+        $AdminPassword = "Admin@12345"
+    }
 }
 
 # Setup test run identifiers and temporary directory
@@ -492,29 +508,57 @@ try {
     $hasDupFileFlag = ($resDup.Data.scamFlags | Where-Object { $_.flagType -eq "DUPLICATE_OFFER_LETTER_FILE" }) -ne $null
     Record-Check -Name "Submit Duplicate-PDF Offer (Student 2)" -Expected "FLAGGED_FOR_REVIEW & DUPLICATE_OFFER_LETTER_FILE" -Actual "$dupStatus (Flag: $hasDupFileFlag)" -Passed ($dupStatus -eq "FLAGGED_FOR_REVIEW" -and $hasDupFileFlag)
 
-    # Step 6: Admin Review Queue Listing
-    Write-Host "Step 6: Listing Review Queue as Admin..." -ForegroundColor Yellow
+    # Step 6: Offer Letter Document Access Controls
+    Write-Host "Step 6: Verifying Offer Letter Document Access Controls..." -ForegroundColor Yellow
+    # 6a. Owner student downloads own offer letter (200)
+    $downOwner = Invoke-ApiJson -Url "$BaseUrl/internships/$cleanOfferId/offer-letter" -Method "GET" -Token $tokenStu1
+    Record-Check -Name "Owner Downloads Own Offer Letter" -Expected "HTTP 200 OK" -Actual "HTTP $($downOwner.StatusCode)" -Passed ($downOwner.StatusCode -eq 200)
+
+    # 6b. Second student denied access to offer letter (403)
+    $downStranger = Invoke-ApiJson -Url "$BaseUrl/internships/$cleanOfferId/offer-letter" -Method "GET" -Token $tokenStu2
+    Record-Check -Name "Second Student Denied Offer Letter" -Expected "HTTP 403 Forbidden" -Actual "HTTP $($downStranger.StatusCode)" -Passed ($downStranger.StatusCode -eq 403)
+
+    # 6c. Logged-out user denied access to offer letter (401)
+    $downLoggedOut = Invoke-ApiJson -Url "$BaseUrl/internships/$cleanOfferId/offer-letter" -Method "GET"
+    Record-Check -Name "Logged-Out Denied Offer Letter" -Expected "HTTP 401 Unauthorized" -Actual "HTTP $($downLoggedOut.StatusCode)" -Passed ($downLoggedOut.StatusCode -eq 401)
+
+    # Step 7: Admin Review Queue Listing
+    Write-Host "Step 7: Listing Review Queue as Admin..." -ForegroundColor Yellow
     $queueReq = Invoke-ApiJson -Url "$BaseUrl/internships/review-queue" -Method "GET" -Token $tokenAdmin
     $queueList = if ($queueReq.Data) { @($queueReq.Data) } else { @() }
     $queueIds  = $queueList | ForEach-Object { $_.id }
     $containsSubmitted = ($queueIds -contains $cleanOfferId) -and ($queueIds -contains $gmailOfferId)
     Record-Check -Name "Admin List Review Queue" -Expected "HTTP 200 & Queue contains submitted offers" -Actual "HTTP $($queueReq.StatusCode) & $($queueList.Count) items in queue" -Passed ($queueReq.StatusCode -eq 200 -and $containsSubmitted)
 
-    # Step 7: Admin Approve Clean Offer
-    Write-Host "Step 7: Approving Offer as Admin..." -ForegroundColor Yellow
+    # Step 8: Admin Approve Clean Offer
+    Write-Host "Step 8: Approving Offer as Admin..." -ForegroundColor Yellow
     $approveReq = Invoke-ApiJson -Url "$BaseUrl/internships/$cleanOfferId/approve" -Method "POST" -Token $tokenAdmin -Body @{}
     $approvedStatus = $approveReq.Data.status
     Record-Check -Name "Approve Clean Offer (Admin)" -Expected "HTTP 200 & MANUALLY_APPROVED" -Actual "HTTP $($approveReq.StatusCode) & $approvedStatus" -Passed ($approveReq.StatusCode -eq 200 -and $approvedStatus -eq "MANUALLY_APPROVED")
 
-    # Step 8: Terminal State Guard Check (Second Approval Refused)
-    Write-Host "Step 8: Verifying Terminal State Guard on Second Approval Attempt..." -ForegroundColor Yellow
+    # Step 9: Approved NOC Document Access Controls
+    Write-Host "Step 9: Verifying Approved NOC Document Access Controls..." -ForegroundColor Yellow
+    # 9a. Owner student downloads own NOC file (200)
+    $nocOwner = Invoke-ApiJson -Url "$BaseUrl/internships/$cleanOfferId/noc-file" -Method "GET" -Token $tokenStu1
+    Record-Check -Name "Owner Downloads Approved NOC File" -Expected "HTTP 200 OK" -Actual "HTTP $($nocOwner.StatusCode)" -Passed ($nocOwner.StatusCode -eq 200)
+
+    # 9b. Second student denied access to NOC file (403)
+    $nocStranger = Invoke-ApiJson -Url "$BaseUrl/internships/$cleanOfferId/noc-file" -Method "GET" -Token $tokenStu2
+    Record-Check -Name "Second Student Denied NOC File" -Expected "HTTP 403 Forbidden" -Actual "HTTP $($nocStranger.StatusCode)" -Passed ($nocStranger.StatusCode -eq 403)
+
+    # 9c. Logged-out user denied access to NOC file (401)
+    $nocLoggedOut = Invoke-ApiJson -Url "$BaseUrl/internships/$cleanOfferId/noc-file" -Method "GET"
+    Record-Check -Name "Logged-Out Denied NOC File" -Expected "HTTP 401 Unauthorized" -Actual "HTTP $($nocLoggedOut.StatusCode)" -Passed ($nocLoggedOut.StatusCode -eq 401)
+
+    # Step 10: Terminal State Guard Check (Second Approval Refused)
+    Write-Host "Step 10: Verifying Terminal State Guard on Second Approval Attempt..." -ForegroundColor Yellow
     $secondApproveReq = Invoke-ApiJson -Url "$BaseUrl/internships/$cleanOfferId/approve" -Method "POST" -Token $tokenAdmin -Body @{}
     $is409Conflict = ($secondApproveReq.StatusCode -eq 409)
     $hasTerminalMsg = $secondApproveReq.RawBody -like "*terminal state*"
     Record-Check -Name "Second Approval Attempt Refused" -Expected "HTTP 409 Conflict (terminal state guard)" -Actual "HTTP $($secondApproveReq.StatusCode)" -Passed ($is409Conflict -and $hasTerminalMsg)
 
-    # Step 9: Admin Reject Offer with Reason
-    Write-Host "Step 9: Rejecting Offer with Reason as Admin..." -ForegroundColor Yellow
+    # Step 11: Admin Reject Offer with Reason
+    Write-Host "Step 11: Rejecting Offer with Reason as Admin..." -ForegroundColor Yellow
     $rejectionReasonText = "HR email uses a free public domain and company identity could not be verified."
     $rejectReq = Invoke-ApiJson -Url "$BaseUrl/internships/$gmailOfferId/reject" -Method "POST" -Token $tokenAdmin -Body @{
         rejectionReason = $rejectionReasonText
@@ -524,8 +568,8 @@ try {
     $rejectPassed   = ($rejectReq.StatusCode -eq 200) -and ($rejectedStatus -eq "MANUALLY_REJECTED") -and ($recordedReason -eq $rejectionReasonText)
     Record-Check -Name "Reject Offer with Reason (Admin)" -Expected "HTTP 200 & MANUALLY_REJECTED" -Actual "HTTP $($rejectReq.StatusCode) & $rejectedStatus" -Passed $rejectPassed
 
-    # Step 10: RBAC Authorization Guard (Student Blocked from Admin Endpoint)
-    Write-Host "Step 10: Verifying RBAC Guard (Student Calling Admin Endpoint)..." -ForegroundColor Yellow
+    # Step 12: RBAC Authorization Guard (Student Blocked from Admin Endpoint)
+    Write-Host "Step 12: Verifying RBAC Guard (Student Calling Admin Endpoint)..." -ForegroundColor Yellow
     $studentTamperReq = Invoke-ApiJson -Url "$BaseUrl/internships/$lowStipendOfferId/approve" -Method "POST" -Token $tokenStu1 -Body @{}
     $is403Forbidden = ($studentTamperReq.StatusCode -eq 403)
     $hasDeniedMsg   = ($studentTamperReq.RawBody -like "*Access denied*" -or $studentTamperReq.RawBody -like "*Forbidden*")

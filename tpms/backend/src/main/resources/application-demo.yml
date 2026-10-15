@@ -1,5 +1,7 @@
 # prototype demo credentials, never use on a public server
 app:
+  admin:
+    cleanup-enabled: true
   demo:
     enabled: true
     accounts:

@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 public class StudentProfileService {
 
     private final StudentRepository studentRepository;
@@ -25,6 +24,22 @@ public class StudentProfileService {
     private final UserRepository userRepository;
     private final ResumeVersionRepository resumeVersionRepository;
     private final ObjectMapper objectMapper;
+
+    public StudentProfileService(
+            StudentRepository studentRepository,
+            StudentProfileRepository studentProfileRepository,
+            AcademicProfileRepository academicProfileRepository,
+            UserRepository userRepository,
+            ResumeVersionRepository resumeVersionRepository,
+            ObjectMapper objectMapper
+    ) {
+        this.studentRepository = studentRepository;
+        this.studentProfileRepository = studentProfileRepository;
+        this.academicProfileRepository = academicProfileRepository;
+        this.userRepository = userRepository;
+        this.resumeVersionRepository = resumeVersionRepository;
+        this.objectMapper = objectMapper;
+    }
 
     @Transactional(readOnly = true)
     public StudentFullProfileDTO getStudentProfile(Long studentId) {
@@ -152,11 +167,11 @@ public class StudentProfileService {
     }
 
     private Student findExistingStudent(Long studentId) {
-        Optional<Student> byUser = studentRepository.findByUserId(studentId);
-        if (byUser.isPresent()) return byUser.get();
-
         Optional<Student> byId = studentRepository.findById(studentId);
         if (byId.isPresent()) return byId.get();
+
+        Optional<Student> byUser = studentRepository.findByUserId(studentId);
+        if (byUser.isPresent()) return byUser.get();
 
         // Read-only check: if user doesn't exist or student entity doesn't exist, throw 404 without mutation
         User user = userRepository.findById(studentId)

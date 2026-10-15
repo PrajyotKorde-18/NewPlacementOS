@@ -38,9 +38,25 @@ public class LoginRateLimiterService {
 
     private final ConcurrentHashMap<String, AttemptRecord> attempts = new ConcurrentHashMap<>();
 
-    public void checkLoginAllowed(String identifier) {
+    private String buildKey(String email, String clientIp) {
+        String cleanEmail = email != null ? email.trim().toLowerCase() : "";
+        String cleanIp = (clientIp != null && !clientIp.isBlank()) ? clientIp.trim() : "unknown";
+        return cleanEmail + ":" + cleanIp;
+    }
+
+    public String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
+        if (request == null) return "unknown";
+        String xfHeader = request.getHeader("X-Forwarded-For");
+        if (xfHeader != null && !xfHeader.isBlank()) {
+            return xfHeader.split(",")[0].trim();
+        }
+        String remoteAddr = request.getRemoteAddr();
+        return (remoteAddr != null && !remoteAddr.isBlank()) ? remoteAddr.trim() : "unknown";
+    }
+
+    public void checkLoginAllowed(String identifier, String clientIp) {
         if (identifier == null || isDemoExempt(identifier)) return;
-        String key = identifier.trim().toLowerCase();
+        String key = buildKey(identifier, clientIp);
         AttemptRecord record = attempts.get(key);
         if (record == null) return;
 
@@ -60,9 +76,13 @@ public class LoginRateLimiterService {
         }
     }
 
-    public void recordFailedAttempt(String identifier) {
+    public void checkLoginAllowed(String identifier) {
+        checkLoginAllowed(identifier, "unknown");
+    }
+
+    public void recordFailedAttempt(String identifier, String clientIp) {
         if (identifier == null || isDemoExempt(identifier)) return;
-        String key = identifier.trim().toLowerCase();
+        String key = buildKey(identifier, clientIp);
         long now = Instant.now().getEpochSecond();
         attempts.compute(key, (k, existing) -> {
             if (existing == null || (now - existing.lastAttemptEpochSeconds > LOCKOUT_DURATION_SECONDS)) {
@@ -74,9 +94,17 @@ public class LoginRateLimiterService {
         });
     }
 
-    public void recordSuccess(String identifier) {
+    public void recordFailedAttempt(String identifier) {
+        recordFailedAttempt(identifier, "unknown");
+    }
+
+    public void recordSuccess(String identifier, String clientIp) {
         if (identifier == null) return;
-        attempts.remove(identifier.trim().toLowerCase());
+        attempts.remove(buildKey(identifier, clientIp));
+    }
+
+    public void recordSuccess(String identifier) {
+        recordSuccess(identifier, "unknown");
     }
 
     public void clearAll() {

@@ -35,7 +35,6 @@ public class ResumeService {
     @Value("${app.upload.dir:uploads/resumes}")
     private String uploadDir;
 
-    @Transactional
     public ResumeUploadResponse uploadResume(Long studentId, MultipartFile file) {
         com.placementos.tpms.util.FileUploadValidator.validateFile(
                 file,
@@ -56,20 +55,30 @@ public class ResumeService {
 
         resumeVersion = resumeVersionRepository.saveAndFlush(resumeVersion);
 
-        // Process extraction for fast instant UI response
-        asyncResumeProcessor.processResumeSync(resumeVersion.getId());
+        // 2. Hand work to existing @Async processor on bounded ThreadPoolTaskExecutor
+        try {
+            asyncResumeProcessor.processResumeAsync(resumeVersion.getId());
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            log.error("[Resume Service] Bounded queue full. Task rejected for resume ID: {}", resumeVersion.getId(), e);
+            resumeVersion.setExtractionStatus(ExtractionStatus.FAILED);
+            resumeVersion.setErrorLog("Resume processing queue is full. Please try again later.");
+            resumeVersionRepository.save(resumeVersion);
+            throw new com.placementos.tpms.exception.AppException(
+                    "Resume processing queue is full. Please try again later.",
+                    org.springframework.http.HttpStatus.TOO_MANY_REQUESTS
+            );
+        }
 
-        ResumeVersion updated = resumeVersionRepository.findById(resumeVersion.getId()).orElse(resumeVersion);
-
+        // 3. Return immediately with PENDING status
         return ResumeUploadResponse.builder()
-                .resumeId(updated.getId())
-                .versionId(updated.getId())
+                .resumeId(resumeVersion.getId())
+                .versionId(resumeVersion.getId())
                 .studentId(student.getId())
                 .filePath(savedFilePath)
-                .extractionStatus(updated.getExtractionStatus())
-                .message("Resume uploaded and parsed successfully.")
+                .extractionStatus(resumeVersion.getExtractionStatus())
+                .message("Resume uploaded successfully. Extraction enqueued asynchronously.")
                 .extractedData(null)
-                .extractionSource(updated.getExtractionSource())
+                .extractionSource(null)
                 .build();
     }
 

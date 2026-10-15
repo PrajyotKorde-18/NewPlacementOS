@@ -35,18 +35,27 @@ public class AuthController {
     private final LoginRateLimiterService loginRateLimiterService;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
-        loginRateLimiterService.checkLoginAllowed(request.getEmail());
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, jakarta.servlet.http.HttpServletRequest httpRequest) {
+        String clientIp = loginRateLimiterService.getClientIp(httpRequest);
+        return doLogin(request, clientIp);
+    }
+
+    public ResponseEntity<?> login(LoginRequest request) {
+        return doLogin(request, "unknown");
+    }
+
+    private ResponseEntity<?> doLogin(LoginRequest request, String clientIp) {
+        loginRateLimiterService.checkLoginAllowed(request.getEmail(), clientIp);
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
 
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            loginRateLimiterService.recordFailedAttempt(request.getEmail());
+            loginRateLimiterService.recordFailedAttempt(request.getEmail(), clientIp);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid credentials"));
         }
 
-        loginRateLimiterService.recordSuccess(request.getEmail());
+        loginRateLimiterService.recordSuccess(request.getEmail(), clientIp);
 
         String token = jwtUtils.generateToken(user.getEmail(), user.getRole());
         return ResponseEntity.ok(Map.of(

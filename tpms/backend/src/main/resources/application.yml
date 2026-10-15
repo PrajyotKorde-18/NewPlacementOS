@@ -23,6 +23,16 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
 
 app:
+  admin:
+    cleanup-enabled: false
+  upload:
+    dir: uploads/resumes
+  resume:
+    thread-pool:
+      core-size: 2
+      max-size: 4
+      queue-capacity: 10
+      thread-name-prefix: TPMS-Resume-Async-
   bootstrap:
     coordinator-email: ${BOOTSTRAP_COORDINATOR_EMAIL:coord_user@rknec.edu}
     coordinator-password: ${BOOTSTRAP_COORDINATOR_PASSWORD:Coord@12345}

@@ -53,11 +53,15 @@ public class ResumeController {
     public ResponseEntity<?> getResumeStatus(@PathVariable Long versionId) {
         ResumeVersion version = resumeVersionRepository.findById(versionId).orElse(null);
         if (version == null) {
-            return ResponseEntity.ok(Map.of("extractionStatus", "PROCESSED", "versionId", versionId));
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "versionId", versionId,
+                    "extractionStatus", "FAILED",
+                    "errorLog", "Resume version not found"
+            ));
         }
         return ResponseEntity.ok(Map.of(
                 "versionId", version.getId(),
-                "extractionStatus", version.getExtractionStatus() != null ? version.getExtractionStatus().name() : "PROCESSED",
+                "extractionStatus", version.getExtractionStatus() != null ? version.getExtractionStatus().name() : "PENDING",
                 "errorLog", version.getErrorLog() != null ? version.getErrorLog() : ""
         ));
     }
