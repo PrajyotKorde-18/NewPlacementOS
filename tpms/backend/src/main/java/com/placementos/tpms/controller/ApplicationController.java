@@ -25,8 +25,9 @@ public class ApplicationController {
     public ResponseEntity<ApplicationResponseDTO> overrideStatus(
             @PathVariable Long applicationId,
             @Valid @RequestBody OverrideStatusRequestDTO request,
-            @AuthenticationPrincipal User currentUser) {
-        ApplicationResponseDTO response = applicationService.overrideApplicationStatus(applicationId, request, currentUser);
+            java.security.Principal principal) {
+        String email = principal != null ? principal.getName() : null;
+        ApplicationResponseDTO response = applicationService.overrideApplicationStatus(applicationId, request, email);
         return ResponseEntity.ok(response);
     }
 

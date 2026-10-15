@@ -15,21 +15,19 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/internships")
-@RequiredArgsConstructor
 public class InternshipSubmissionController {
 
     private final InternshipSubmissionService submissionService;
 
+    public InternshipSubmissionController(InternshipSubmissionService submissionService) {
+        this.submissionService = submissionService;
+    }
+
     @PostMapping(value = "/submit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<InternshipResponseDTO> submitOffer(
-            @jakarta.validation.Valid @RequestPart(value = "dto", required = false) InternshipSubmissionDTO dtoPart,
-            @jakarta.validation.Valid @RequestPart(value = "data", required = false) InternshipSubmissionDTO dataPart,
+            @jakarta.validation.Valid @RequestPart("dto") InternshipSubmissionDTO dto,
             @RequestPart(value = "file", required = false) MultipartFile offerLetterFile
     ) throws IOException {
-        InternshipSubmissionDTO dto = dtoPart != null ? dtoPart : dataPart;
-        if (dto == null) {
-            throw new IllegalArgumentException("Submission payload (part 'dto' or 'data') is required.");
-        }
         InternshipResponseDTO response = submissionService.submitOffer(dto, offerLetterFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

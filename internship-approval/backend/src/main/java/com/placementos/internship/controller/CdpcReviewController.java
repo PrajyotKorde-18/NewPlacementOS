@@ -17,10 +17,13 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/internships")
-@RequiredArgsConstructor
 public class CdpcReviewController {
 
     private final CdpcReviewService cdpcReviewService;
+
+    public CdpcReviewController(CdpcReviewService cdpcReviewService) {
+        this.cdpcReviewService = cdpcReviewService;
+    }
 
     @GetMapping("/review-queue")
     @PreAuthorize("hasAnyRole('CDPC_STAFF', 'CDPC_ADMIN')")

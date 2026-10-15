@@ -14,10 +14,13 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/policy-rules")
-@RequiredArgsConstructor
 public class PolicyRuleController {
 
     private final PolicyRuleService policyRuleService;
+
+    public PolicyRuleController(PolicyRuleService policyRuleService) {
+        this.policyRuleService = policyRuleService;
+    }
 
     @GetMapping
     @PreAuthorize("hasAnyRole('CDPC_STAFF', 'CDPC_ADMIN')")

@@ -192,7 +192,7 @@ function Invoke-ApiMultipart {
 
         $jsonStr = $Data | ConvertTo-Json -Compress -Depth 10
         $jsonContent = [System.Net.Http.StringContent]::new($jsonStr, [System.Text.Encoding]::UTF8, "application/json")
-        $content.Add($jsonContent, "data")
+        $content.Add($jsonContent, "dto")
 
         if ($FilePath -and (Test-Path $FilePath)) {
             $fileBytes = [System.IO.File]::ReadAllBytes($FilePath)

@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ApplicationService {
 
@@ -28,6 +27,23 @@ public class ApplicationService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+
+    public ApplicationService(
+            ApplicationRepository applicationRepository,
+            StudentRepository studentRepository,
+            UserRepository userRepository,
+            ObjectMapper objectMapper) {
+        this.applicationRepository = applicationRepository;
+        this.studentRepository = studentRepository;
+        this.userRepository = userRepository;
+        this.objectMapper = objectMapper;
+    }
+
+    @Transactional
+    public ApplicationResponseDTO overrideApplicationStatus(Long applicationId, OverrideStatusRequestDTO request, String coordinatorEmail) {
+        User coordinator = coordinatorEmail != null ? userRepository.findByEmail(coordinatorEmail).orElse(null) : null;
+        return overrideApplicationStatus(applicationId, request, coordinator);
+    }
 
     @Transactional
     public ApplicationResponseDTO overrideApplicationStatus(Long applicationId, OverrideStatusRequestDTO request, User coordinator) {
@@ -49,7 +65,7 @@ public class ApplicationService {
 
         application = applicationRepository.save(application);
         log.info("Coordinator User ID {} overridden Application ID {} status to {} with reason: {}",
-                coordinator.getId(), applicationId, targetStatus, request.getOverrideReason());
+                coordinator != null ? coordinator.getId() : null, applicationId, targetStatus, request.getOverrideReason());
 
         return mapToApplicationResponseDTO(application);
     }

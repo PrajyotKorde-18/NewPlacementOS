@@ -40,7 +40,7 @@ public class AcademicProfileEligibilityTest {
     @BeforeEach
     void setUp() {
         // Student 1: 8 finalized semesters (SGPAs: 8.0, 8.5, 7.5, 9.0, 8.0, 8.5, 9.0, 9.0 -> Sum = 67.5, AVG = 8.4375 -> rounded 8.44) and 2 active backlogs
-        User user1 = userRepository.save(User.builder().email("student1@rknec.edu").name("Student One").password("pass").build());
+        User user1 = userRepository.save(User.builder().email("elig_student1@rknec.edu").name("Student One").password("pass").build());
         studentMulti = studentRepository.save(Student.builder().user(user1).collegeId("COLL001").build());
 
         AcademicProfile ap1 = AcademicProfile.builder().student(studentMulti).studentId(studentMulti.getId()).build();
@@ -59,7 +59,7 @@ public class AcademicProfileEligibilityTest {
         academicProfileRepository.save(ap1);
 
         // Student 2: 4 finalized semesters (SGPAs: 9.0, 9.0, 9.0, 9.0 -> AVG = 9.0) and 0 active backlogs
-        User user2 = userRepository.save(User.builder().email("student2@rknec.edu").name("Student Two").password("pass").build());
+        User user2 = userRepository.save(User.builder().email("elig_student2@rknec.edu").name("Student Two").password("pass").build());
         studentZeroBacklog = studentRepository.save(Student.builder().user(user2).collegeId("COLL002").build());
 
         AcademicProfile ap2 = AcademicProfile.builder().student(studentZeroBacklog).studentId(studentZeroBacklog.getId()).build();
@@ -69,7 +69,7 @@ public class AcademicProfileEligibilityTest {
         academicProfileRepository.save(ap2);
 
         // Student 3: No finalized semesters, no backlog records
-        User user3 = userRepository.save(User.builder().email("student3@rknec.edu").name("Student Three").password("pass").build());
+        User user3 = userRepository.save(User.builder().email("elig_student3@rknec.edu").name("Student Three").password("pass").build());
         studentNoSem = studentRepository.save(Student.builder().user(user3).collegeId("COLL003").build());
         AcademicProfile ap3 = AcademicProfile.builder().student(studentNoSem).studentId(studentNoSem.getId()).build();
         academicProfileRepository.save(ap3);
