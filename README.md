@@ -129,27 +129,36 @@ CREATE DATABASE IF NOT EXISTS internship_db CHARACTER SET utf8mb4 COLLATE utf8mb
 
 ---
 
-## 🚀 Running the Applications Locally
+## 🚀 Running the Applications Locally (Zero-Setup Demo Profile Active by Default)
 
-PlacementOS requires 4 separate terminal windows to run both microservices concurrently:
+PlacementOS backends enable the **`demo` profile by default** (`spring.profiles.default: demo`). This seeds all prototype demo accounts and verified academic profiles on first boot without any manual registration or setup.
+
+### Quick Start (All Services in 1 Click):
+```powershell
+.\start-all.bat
+# or in PowerShell:
+.\start-all.ps1
+```
+
+Or start microservices individually:
 
 ### Terminal 1: TPMS Backend (Port 8081)
 ```powershell
-cd c:\Users\Lenovo\Downloads\PlacementOS\tpms\backend
-mvn spring-boot:run
+cd tpms\backend
+.\mvnw.cmd spring-boot:run
 ```
 *Health Check:* `http://localhost:8081/api/drives`
 
 ### Terminal 2: Internship Approval Backend (Port 8082)
 ```powershell
-cd c:\Users\Lenovo\Downloads\PlacementOS\internship-approval\backend
-mvn spring-boot:run
+cd internship-approval\backend
+.\mvnw.cmd spring-boot:run
 ```
 *Health Check:* `http://localhost:8082/api/internships`
 
 ### Terminal 3: TPMS Frontend (Port 3000)
 ```powershell
-cd c:\Users\Lenovo\Downloads\PlacementOS\tpms\frontend
+cd tpms\frontend
 npm install
 npm run dev
 ```
@@ -157,7 +166,7 @@ npm run dev
 
 ### Terminal 4: Internship Approval Frontend (Port 3001)
 ```powershell
-cd c:\Users\Lenovo\Downloads\PlacementOS\internship-approval\frontend
+cd internship-approval\frontend
 npm install
 npm run dev
 ```
@@ -165,16 +174,24 @@ npm run dev
 
 ---
 
-## 👤 Default Pre-Configured Accounts
+## 👤 1-Click Quick-Login Demo Accounts
 
-Both microservices automatically seed default administrative accounts on first startup if no matching staff accounts are found:
+Both frontends provide instant 1-click login buttons powered by the backend `demo` profile:
 
-| Service | Portal Role | Email | Password | Primary Capabilities |
+| App | UI Quick-Login Button | Email | Role | Verification Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **TPMS** | Placement Coordinator | `coord_user@rknec.edu` | `Coord@12345` | Create Drives, AI JD Extraction, Rank Applicants, Override Status, Purge Data |
-| **TPMS** | Student Candidate | `student1@rknec.edu` | `Student@12345` | Academic Setup, PDF Resume Upload, Apply to Drives, View Rejection Feedback |
-| **Internship** | CDPC Admin | `admin@rknec.edu` | `Admin@12345` | CDPC Review Queue, Flag Inspection, Approve/Reject Offers, Edit Policy Rules |
-| **Internship** | Student Candidate | `student1@rknec.edu` | `Student@12345` | Submit Offer Details + PDF, View Real-Time Policy Audit & NOC Status |
+| **TPMS** | `Student Candidate` | `candidate.student@rknec.edu` | `STUDENT` | Verified (8.5 CGPA, 0 backlogs, CSE) |
+| **TPMS** | `TPO / Coordinator` | `admin@rknec.edu` | `ADMIN` | Staff Admin Privileges |
+| **TPMS** | Testing / Manual | `student1@rknec.edu` | `STUDENT` | Verified (8.5 CGPA, 0 backlogs, CSE) |
+| **TPMS** | Testing / Manual | `coord_user@rknec.edu` | `COORDINATOR` | Placement Coordinator |
+| **Internship** | `Rahul Sharma (Student)` | `student1@rknec.edu` | `STUDENT` | Student Submissions & NOC Access |
+| **Internship** | `CDPC Admin` | `admin@rknec.edu` | `CDPC_ADMIN` | Review Queue & Policy Rule Customization |
+
+> **Preservation Guarantee**: See [`docs/PRESERVATION_CONTRACT.md`](docs/PRESERVATION_CONTRACT.md) for immutable login and demo account preservation rules.
+> To verify that all demo logins and backend endpoints remain functional after any change, run:
+> ```powershell
+> powershell -ExecutionPolicy Bypass -File scripts/preservation-check.ps1
+> ```
 
 > **Domain Restriction:** All user registration and login endpoints enforce the `@rknec.edu` domain. Non-campus email addresses are rejected with `400 Bad Request`.
 

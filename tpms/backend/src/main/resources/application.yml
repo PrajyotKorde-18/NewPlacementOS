@@ -6,10 +6,12 @@ server:
 spring:
   application:
     name: tpms-backend
+  profiles:
+    default: demo
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/tpms_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -23,14 +25,14 @@ spring:
 app:
   bootstrap:
     coordinator-email: ${BOOTSTRAP_COORDINATOR_EMAIL:coord_user@rknec.edu}
-    coordinator-password: ${BOOTSTRAP_COORDINATOR_PASSWORD:}
+    coordinator-password: ${BOOTSTRAP_COORDINATOR_PASSWORD:Coord@12345}
   auth:
-    jwt-secret: ${JWT_SECRET:}
+    jwt-secret: ${JWT_SECRET:9f82d1c3a7b5e406214580cdfb3742ea1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d}
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
     allowed-email-domain: ${ALLOWED_EMAIL_DOMAIN:rknec.edu}
   groq:
     api-key: ${GROQ_API_KEY:}
-    mock-mode: ${GROQ_MOCK_MODE:false}
+    mock-mode: ${GROQ_MOCK_MODE:true}
     model: ${GROQ_MODEL:groq/compound-mini}
 
 logging:

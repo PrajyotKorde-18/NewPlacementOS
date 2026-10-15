@@ -1,0 +1,37 @@
+# prototype demo credentials, never use on a public server
+app:
+  demo:
+    enabled: true
+    accounts:
+      - email: candidate.student@rknec.edu
+        password: StudentPassword123
+        name: Rahul Sharma
+        role: STUDENT
+        college-id: 2022CS099
+        college-roll-number: 2022CS099
+        phone-number: "9876543210"
+        branch: Computer Science & Engineering
+        cgpa: 8.5
+        tenth-percentage: 85.0
+        twelfth-percentage: 82.0
+        skills: "Java, Spring Boot, React, MySQL, JavaScript"
+      - email: student1@rknec.edu
+        password: Student@12345
+        name: Rahul Sharma
+        role: STUDENT
+        college-id: STUDENT1
+        college-roll-number: 2022CS099
+        phone-number: "9876543210"
+        branch: Computer Science & Engineering
+        cgpa: 8.5
+        tenth-percentage: 85.0
+        twelfth-percentage: 82.0
+        skills: "Java, Spring Boot, React, MySQL, JavaScript"
+      - email: admin@rknec.edu
+        password: AdminPassword123
+        name: TPO Placement Admin
+        role: ADMIN
+      - email: coord_user@rknec.edu
+        password: Coord@12345
+        name: System Placement Coordinator
+        role: COORDINATOR

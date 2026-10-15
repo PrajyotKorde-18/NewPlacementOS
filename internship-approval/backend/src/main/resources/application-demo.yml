@@ -1,0 +1,17 @@
+# prototype demo credentials, never use on a public server
+app:
+  demo:
+    enabled: true
+    accounts:
+      - email: student1@rknec.edu
+        password: Student@12345
+        name: Rahul Sharma
+        role: STUDENT
+        college-id: STU001
+        cgpa: 8.5
+        branch: Computer Science
+      - email: admin@rknec.edu
+        password: Admin@12345
+        name: System CDPC Admin
+        role: CDPC_ADMIN
+        college-id: ADMIN001

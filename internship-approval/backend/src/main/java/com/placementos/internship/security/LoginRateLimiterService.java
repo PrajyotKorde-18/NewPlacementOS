@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -12,6 +13,16 @@ public class LoginRateLimiterService {
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCKOUT_DURATION_SECONDS = 15 * 60; // 15 minutes
+
+    private static final Set<String> EXEMPT_DEMO_EMAILS = Set.of(
+            "student1@rknec.edu",
+            "admin@rknec.edu"
+    );
+
+    public boolean isDemoExempt(String identifier) {
+        if (identifier == null) return false;
+        return EXEMPT_DEMO_EMAILS.contains(identifier.trim().toLowerCase());
+    }
 
     private static class AttemptRecord {
         int failedAttempts;
@@ -26,7 +37,7 @@ public class LoginRateLimiterService {
     private final ConcurrentHashMap<String, AttemptRecord> attempts = new ConcurrentHashMap<>();
 
     public void checkLoginAllowed(String identifier) {
-        if (identifier == null) return;
+        if (identifier == null || isDemoExempt(identifier)) return;
         String key = identifier.trim().toLowerCase();
         AttemptRecord record = attempts.get(key);
         if (record == null) return;
@@ -47,7 +58,7 @@ public class LoginRateLimiterService {
     }
 
     public void recordFailedAttempt(String identifier) {
-        if (identifier == null) return;
+        if (identifier == null || isDemoExempt(identifier)) return;
         String key = identifier.trim().toLowerCase();
         long now = Instant.now().getEpochSecond();
         attempts.compute(key, (k, existing) -> {

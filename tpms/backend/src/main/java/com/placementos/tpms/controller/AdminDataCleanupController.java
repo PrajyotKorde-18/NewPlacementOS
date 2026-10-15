@@ -15,7 +15,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/data")
-@RequiredArgsConstructor
 @Slf4j
 public class AdminDataCleanupController {
 
@@ -26,9 +25,32 @@ public class AdminDataCleanupController {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final ResumeVersionRepository resumeVersionRepository;
+    private final java.util.Optional<com.placementos.tpms.config.DemoAccountSeeder> demoAccountSeeder;
 
     @PersistenceContext
     private final EntityManager entityManager;
+
+    public AdminDataCleanupController(
+            ApplicationRepository applicationRepository,
+            DriveRepository driveRepository,
+            AcademicProfileRepository academicProfileRepository,
+            StudentProfileRepository studentProfileRepository,
+            StudentRepository studentRepository,
+            UserRepository userRepository,
+            ResumeVersionRepository resumeVersionRepository,
+            java.util.Optional<com.placementos.tpms.config.DemoAccountSeeder> demoAccountSeeder,
+            EntityManager entityManager
+    ) {
+        this.applicationRepository = applicationRepository;
+        this.driveRepository = driveRepository;
+        this.academicProfileRepository = academicProfileRepository;
+        this.studentProfileRepository = studentProfileRepository;
+        this.studentRepository = studentRepository;
+        this.userRepository = userRepository;
+        this.resumeVersionRepository = resumeVersionRepository;
+        this.demoAccountSeeder = demoAccountSeeder;
+        this.entityManager = entityManager;
+    }
 
     @PostMapping("/cleanup")
     @Transactional
@@ -62,6 +84,12 @@ public class AdminDataCleanupController {
 
         // 3. Re-enable FK checks
         entityManager.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+
+        // 4. If running in demo profile, restore pristine verified demo student accounts
+        demoAccountSeeder.ifPresent(seeder -> {
+            log.info("[ADMIN CLEANUP] Re-seeding verified demo accounts post-cleanup...");
+            seeder.seedDemoAccounts();
+        });
 
         log.info("[ADMIN CLEANUP COMPLETED] Purged {} applications, {} drives, {} resumes, {} academic profiles, {} profiles, {} student records, and {} student user accounts.",
                 appCount, driveCount, resumeCount, academicCount, profileCount, studentCount, userCount);
