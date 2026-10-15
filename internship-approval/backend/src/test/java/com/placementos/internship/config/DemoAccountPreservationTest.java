@@ -31,6 +31,9 @@ public class DemoAccountPreservationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private com.placementos.internship.repository.StudentRepository studentRepository;
+
+    @Autowired
     private AuthController authController;
 
     @Autowired
@@ -93,6 +96,20 @@ public class DemoAccountPreservationTest {
             // Verify checkLoginAllowed still passes without throwing TOO_MANY_REQUESTS
             assertDoesNotThrow(() -> loginRateLimiterService.checkLoginAllowed(email),
                     "checkLoginAllowed must never throw for exempt demo account: " + email);
+        }
+    }
+
+    @Test
+    @DisplayName("Verify student demo accounts have verified student records")
+    void testDemoStudentsHaveVerifiedStudentRecords() {
+        for (DemoAccountProperties.DemoAccountConfig config : demoProperties.getAccounts()) {
+            if ("STUDENT".equalsIgnoreCase(config.getRole())) {
+                User user = userRepository.findByEmail(config.getEmail().toLowerCase()).orElseThrow();
+                com.placementos.internship.entity.Student student = studentRepository.findByUserId(user.getId()).orElse(null);
+                assertNotNull(student, "Student record must exist for demo student: " + config.getEmail());
+                assertNotNull(student.getGpa(), "GPA must be non-null");
+                assertTrue(student.getGpa() >= 7.5, "Demo student GPA must be >= 7.5 (verified status)");
+            }
         }
     }
 }
