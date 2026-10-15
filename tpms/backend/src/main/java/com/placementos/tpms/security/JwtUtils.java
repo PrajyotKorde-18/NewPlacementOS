@@ -20,6 +20,16 @@ public class JwtUtils {
     @Value("${app.auth.allowed-email-domain:rknec.edu}")
     private String allowedEmailDomain;
 
+    @jakarta.annotation.PostConstruct
+    public void validateSecret() {
+        if (jwtSecret == null || jwtSecret.trim().isEmpty()) {
+            throw new IllegalStateException("Startup failed: JWT secret (JWT_SECRET / app.auth.jwt-secret) is missing or empty.");
+        }
+        if (jwtSecret.trim().length() < 32) {
+            throw new IllegalStateException("Startup failed: JWT secret (JWT_SECRET / app.auth.jwt-secret) is shorter than 32 characters (length: " + jwtSecret.trim().length() + ").");
+        }
+    }
+
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
