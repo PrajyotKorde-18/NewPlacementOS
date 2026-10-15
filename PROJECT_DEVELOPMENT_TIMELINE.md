@@ -55,7 +55,7 @@ gantt
 
 ### Phase 2: Microservice Scaffolding, Security & Frontend Design System
 **Duration:** July 30, 2026 – August 5, 2026 (Week 2)
-- **Jul 30 – Aug 01:** Initialized Spring Boot 3.x microservices with Java 21 & Maven. Configured relational persistence layer (Spring Data JPA, Hibernate, MySQL/Oracle/H2).
+- **Jul 30 – Aug 01:** Initialized Spring Boot 3.x microservices with Java 17 & Maven. Configured relational persistence layer (Spring Data JPA, Hibernate, MySQL/Oracle/H2).
 - **Aug 02 – Aug 03:** Implemented Spring Security with JWT stateless authentication. Built domain enforcement filter restricting user registration strictly to `@rknec.edu`.
 - **Aug 04 – Aug 05:** Frontend React 18 + Vite repository setup. Designed custom Vanilla CSS design system (dark/glassmorphism theme, HSL color tokens, responsive navigation shell).
 

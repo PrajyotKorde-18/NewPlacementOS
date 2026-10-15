@@ -21,14 +21,14 @@ PlacementOS consists of two decoupled, independent full-stack microservices:
 Before running backends, ensure the following environment variables are set in your terminal session:
 
 ```powershell
-$env:JWT_SECRET="b5fdcda6d2fac77740f1edac9926630fedb032c696a707cf81438282219d09f74"
+$env:JWT_SECRET="<generate-with-openssl-rand-hex-32-or-use-a-secure-32-byte-hex-string>"
 $env:SPRING_DATASOURCE_USERNAME="root"
-$env:SPRING_DATASOURCE_PASSWORD="Arjun"
+$env:SPRING_DATASOURCE_PASSWORD="<your_local_mysql_password>"
 $env:BOOTSTRAP_ADMIN_EMAIL="admin@rknec.edu"
 $env:BOOTSTRAP_ADMIN_PASSWORD="Admin@12345"
 $env:BOOTSTRAP_COORDINATOR_EMAIL="coord_user@rknec.edu"
 $env:BOOTSTRAP_COORDINATOR_PASSWORD="Coord@12345"
-$env:GROQ_API_KEY="your_groq_api_key_here"
+$env:GROQ_API_KEY="<your_groq_api_key_or_leave_empty_for_mock_mode>"
 ```
 
 ### Starting the Applications

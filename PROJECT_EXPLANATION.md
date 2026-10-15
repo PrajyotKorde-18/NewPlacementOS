@@ -71,7 +71,7 @@ flowchart TD
 ## 3. Deep-Dive Microservice Breakdown
 
 ### 3.1 Microservice 1: TPMS (`tpms/`)
-* **Backend:** Spring Boot 3.x with Java 21 (Port `8081`, Context Path `/api`)
+* **Backend:** Spring Boot 3.x with Java 17 (Port `8081`, Context Path `/api`)
 * **Frontend:** React 18 + Vite (Port `3000`)
 * **Database:** MySQL (`tpms_db`)
 
@@ -118,7 +118,7 @@ flowchart TD
 ---
 
 ### 3.2 Microservice 2: Internship Approval System (`internship-approval/`)
-* **Backend:** Spring Boot 3.x with Java 21 (Port `8082`, Context Path `/api`)
+* **Backend:** Spring Boot 3.x with Java 17 (Port `8082`, Context Path `/api`)
 * **Frontend:** React 18 + Vite (Port `3001`)
 * **Database:** MySQL (`internship_db`)
 
@@ -147,7 +147,7 @@ flowchart TD
 
 | Component Layer | Technology / Library | Version / Details | Purpose / Role |
 | :--- | :--- | :--- | :--- |
-| **JDK / Runtime** | Java OpenJDK | 21 | High-performance backend execution |
+| **JDK / Runtime** | Java OpenJDK | 17 | High-performance backend execution |
 | **Backend Framework** | Spring Boot | 3.x | Microservice framework, REST APIs, JPA |
 | **Security** | Spring Security + JWT | JJWT 0.11.5 | Stateless authentication & RBAC |
 | **AI / LLM Infrastructure** | Groq Cloud API | `llama-3.3-70b-versatile` | JSON JD extraction & PDF resume parsing |
@@ -293,7 +293,7 @@ erDiagram
 ## 8. Installation & Setup Guide
 
 ### 8.1 Prerequisites
-- **Java OpenJDK 21** installed and configured in `PATH`.
+- **Java OpenJDK 17** installed and configured in `PATH`.
 - **Node.js v18+** and `npm` installed.
 - **MySQL Server** running locally on port `3306`.
 - **Groq API Key** (Optional - if omitted, systems operate in built-in mock mode).

@@ -22,7 +22,7 @@
 > 
 > *2. **Internship Approval System**: Automates No Objection Certificate (NOC) issuance by running student offer letters through a dynamic Policy Rule Engine that checks minimum stipends, duration, company denylists, and scam pattern flags.*
 > 
-> *Built with Java 21, Spring Boot 3.x, React 18, and MySQL, PlacementOS turns chaotic placement drives into a transparent, data-driven workflow."*
+> *Built with Java 17, Spring Boot 3.x, React 18, and MySQL, PlacementOS turns chaotic placement drives into a transparent, data-driven workflow."*
 
 ---
 
@@ -103,9 +103,9 @@ Different audiences care about different aspects of the system. Use the followin
 * **Metrics to Highlight**: Drive setup in <10 seconds, instant candidate matrix generation, zero ineligible application clutter.
 
 ### 💻 Scenario C: Pitching to Technical Evaluators & Hackathon Judges
-* **Core Theme**: Clean Architecture, Java 21/Spring Boot Design Patterns, & LLM System Integration.
+* **Core Theme**: Clean Architecture, Java 17/Spring Boot Design Patterns, & LLM System Integration.
 * **Key Talking Points**:
-  * *"Built on modern Java 21 and Spring Boot 3.x with stateless JWT security and domain-restricted access filters."*
+  * *"Built on modern Java 17 and Spring Boot 3.x with stateless JWT security and domain-restricted access filters."*
   * *"Engineered using the **Strategy Design Pattern** for candidate scoring, allowing new scoring algorithms (e.g. GitHub activity weight vs. CGPA weight) to be plugged in dynamically."*
   * *"Dual microservice decoupled design separating drive management (TPMS) from policy governance (Internship Approval)."*
   * *"Groq LLM integration features JSON mode schema enforcement and robust offline mock fallbacks for zero downtime."*
@@ -193,7 +193,7 @@ When demonstrating PlacementOS live, follow this **4-Act narrative structure** t
 │ Core Problem             │ Manual Excel shortlisting, opaque cutoffs,   │
 │                          │ unverified internship offers, TPO burnout.   │
 ├──────────────────────────┼──────────────────────────────────────────────┤
-│ Architecture             │ Dual Microservices: Java 21, Spring Boot 3,  │
+│ Architecture             │ Dual Microservices: Java 17, Spring Boot 3,  │
 │                          │ React 18, Groq LLM (Llama 3.3 70B), MySQL.   │
 ├──────────────────────────┼──────────────────────────────────────────────┤
 │ Core Microservice 1      │ TPMS (Port 8081/3000): AI JD/Resume Parsing, │

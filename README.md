@@ -1,0 +1,221 @@
+# PlacementOS
+
+**PlacementOS** is an enterprise-grade, dual-microservice campus recruitment automation and internship governance platform engineered for university career centers and Training & Placement Offices (TPOs). The platform enforces institutional email identity (`@rknec.edu`), automates resume and job description criteria extraction using **Groq LLMs**, enforces deterministic academic eligibility cutoffs at the database layer, dynamically ranks candidates using a **Strategy-Pattern Candidate Scoring Engine**, and provides multi-signal fraud/scam detection for off-campus internship approvals.
+
+---
+
+## 🏛️ Architecture & System Modules
+
+PlacementOS is composed of two independently deployable, decoupled microservices, each with its own dedicated backend, frontend, and database:
+
+```mermaid
+flowchart TD
+    subgraph PlacementOS
+        subgraph System 1: TPMS ["System 1: TPMS (Campus Placements)"]
+            FE1["Frontend: React 18 + Vite (Port 3000)"]
+            BE1["Backend: Spring Boot 3 + Java 17 (Port 8081 /api)"]
+            DB1[("Database: MySQL (tpms_db)")]
+            FE1 --> BE1 --> DB1
+        end
+
+        subgraph System 2: Internship ["System 2: Internship Approval (NOC & Governance)"]
+            FE2["Frontend: React 18 + Vite (Port 3001)"]
+            BE2["Backend: Spring Boot 3 + Java 17 (Port 8082 /api)"]
+            DB2[("Database: MySQL (internship_db)")]
+            FE2 --> BE2 --> DB2
+        end
+    end
+```
+
+### Module 1: TPMS (Training & Placement Management System)
+* **Backend:** Spring Boot 3.x, Java 17 (Port `8081`, API Base `/api`)
+* **Frontend:** React 18, Vite, Tailwind CSS (Port `3000`)
+* **Database:** MySQL (`tpms_db`)
+* **Key Features:**
+  * **Domain Access Control:** JWT stateless authentication restricted strictly to `@rknec.edu` campus emails.
+  * **AI Job Description Extraction:** Uses Groq Cloud LLM (`groq/compound-mini` or `llama-3.3-70b-versatile`) to extract 3-tier skill taxonomies (`MUST_HAVE`, `NICE_TO_HAVE`, `BONUS`), category weights, and cutoffs.
+  * **3-Step Drive Creation Wizard:** Coordinators review, refine, and publish extracted criteria.
+  * **Deterministic Academic Eligibility Guard:** Hard pre-application validation evaluating CGPA, 10th marks %, 12th marks %, and active backlogs. Ineligible applicants are rejected immediately with HTTP `400 Bad Request`.
+  * **Strategy-Pattern Candidate Scoring (0–100):** Multi-dimensional fit scoring across skill match, project relevance, coding activity (LeetCode/GitHub), certifications, and experience.
+  * **Accountable Status Overrides:** Coordinators can force-include or force-exclude applicants, requiring a non-empty written justification logged in the permanent audit trail.
+  * **Deterministic Rejection Feedback:** Explains selection/rejection rationale, lists missing skills, and provides a customized growth roadmap for students.
+  * **Administrative Data Purge:** One-click database cleanup endpoint (`POST /api/admin/data/cleanup`) safely clearing student records and drives while preserving coordinator accounts.
+
+### Module 2: Internship Approval System
+* **Backend:** Spring Boot 3.x, Java 17 (Port `8082`, API Base `/api`)
+* **Frontend:** React 18, Vite, Tailwind CSS (Port `3001`)
+* **Database:** MySQL (`internship_db`)
+* **Key Features:**
+  * **Offer Letter Submissions:** Students submit internship offer details and PDF attachments with automatic SHA-256 duplicate file hashing.
+  * **Dynamic Policy Rule Engine:** Evaluates offers against configurable institutional policies (minimum stipend, minimum duration, company denylists, trusted company allowlists).
+  * **Multi-Signal Scam Pattern Detector:** Flags suspicious offers across 4 vectors:
+    1. HR contact emails using public/free domains (`gmail.com`, `yahoo.com`, etc.).
+    2. High-velocity offer submissions for the same company across distinct students within 60 days.
+    3. Duplicate HR contact emails submitted by different students.
+    4. Duplicate offer letter PDF SHA-256 hash collisions.
+  * **CDPC Review Queue:** Institutional placement cell administrators audit flagged submissions and execute approvals or rejections.
+  * **Digital NOC Generation:** Generates official, formatted university No Objection Certificate (NOC) PDFs on approval using Apache PDFBox.
+
+---
+
+## 📋 Prerequisites
+
+Before running PlacementOS locally, ensure the following are installed:
+
+| Tool | Minimum Version | Verification Command |
+| :--- | :--- | :--- |
+| **Java OpenJDK** | 17 LTS | `java -version` |
+| **Apache Maven** | 3.8+ | `mvn -v` |
+| **Node.js** | 18+ (LTS) | `node -v` |
+| **npm** | 9+ | `npm -v` |
+| **MySQL Server** | 8.x | `mysql --version` |
+
+---
+
+## ⚙️ Environment Variables & Configuration
+
+Both modules use environment variables for sensitive settings. Example templates are provided in `.env.example` in each module directory:
+* `tpms/.env.example`
+* `internship-approval/.env.example`
+
+### Required Variables (PowerShell)
+
+Set these variables in your terminal before running the backends:
+
+```powershell
+# Relational Database Credentials
+$env:SPRING_DATASOURCE_USERNAME="root"
+$env:SPRING_DATASOURCE_PASSWORD="<your_local_mysql_password>"
+
+# JWT Secret Key (Requires a secure 256-bit / 32-byte hex string)
+# Generate with: openssl rand -hex 32
+$env:JWT_SECRET="<your_32_byte_jwt_secret_hex>"
+
+# Groq LLM API Key (Optional: if empty or unset, system operates in offline mock mode)
+$env:GROQ_API_KEY="<your_groq_api_key_or_leave_empty_for_mock_mode>"
+
+# Optional Bootstrap Account Overrides
+$env:BOOTSTRAP_COORDINATOR_EMAIL="coord_user@rknec.edu"
+$env:BOOTSTRAP_COORDINATOR_PASSWORD="Coord@12345"
+$env:BOOTSTRAP_ADMIN_EMAIL="admin@rknec.edu"
+$env:BOOTSTRAP_ADMIN_PASSWORD="Admin@12345"
+```
+
+### Required Variables (Bash / Linux / macOS)
+
+```bash
+export SPRING_DATASOURCE_USERNAME="root"
+export SPRING_DATASOURCE_PASSWORD="<your_local_mysql_password>"
+export JWT_SECRET="$(openssl rand -hex 32)"
+export GROQ_API_KEY="<your_groq_api_key_or_leave_empty_for_mock_mode>"
+export BOOTSTRAP_COORDINATOR_EMAIL="coord_user@rknec.edu"
+export BOOTSTRAP_COORDINATOR_PASSWORD="Coord@12345"
+export BOOTSTRAP_ADMIN_EMAIL="admin@rknec.edu"
+export BOOTSTRAP_ADMIN_PASSWORD="Admin@12345"
+```
+
+---
+
+## 🗄️ Database Setup
+
+Ensure your local MySQL service is running on `localhost:3306`. Create the two independent databases:
+
+```sql
+CREATE DATABASE IF NOT EXISTS tpms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS internship_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+*(Note: If `createDatabaseIfNotExist=true` is enabled in the JDBC connection strings, Spring Boot will attempt to auto-create them on first startup).*
+
+---
+
+## 🚀 Running the Applications Locally
+
+PlacementOS requires 4 separate terminal windows to run both microservices concurrently:
+
+### Terminal 1: TPMS Backend (Port 8081)
+```powershell
+cd c:\Users\Lenovo\Downloads\PlacementOS\tpms\backend
+mvn spring-boot:run
+```
+*Health Check:* `http://localhost:8081/api/drives`
+
+### Terminal 2: Internship Approval Backend (Port 8082)
+```powershell
+cd c:\Users\Lenovo\Downloads\PlacementOS\internship-approval\backend
+mvn spring-boot:run
+```
+*Health Check:* `http://localhost:8082/api/internships`
+
+### Terminal 3: TPMS Frontend (Port 3000)
+```powershell
+cd c:\Users\Lenovo\Downloads\PlacementOS\tpms\frontend
+npm install
+npm run dev
+```
+*Access in Browser:* `http://localhost:3000`
+
+### Terminal 4: Internship Approval Frontend (Port 3001)
+```powershell
+cd c:\Users\Lenovo\Downloads\PlacementOS\internship-approval\frontend
+npm install
+npm run dev
+```
+*Access in Browser:* `http://localhost:3001`
+
+---
+
+## 👤 Default Pre-Configured Accounts
+
+Both microservices automatically seed default administrative accounts on first startup if no matching staff accounts are found:
+
+| Service | Portal Role | Email | Password | Primary Capabilities |
+| :--- | :--- | :--- | :--- | :--- |
+| **TPMS** | Placement Coordinator | `coord_user@rknec.edu` | `Coord@12345` | Create Drives, AI JD Extraction, Rank Applicants, Override Status, Purge Data |
+| **TPMS** | Student Candidate | `student1@rknec.edu` | `Student@12345` | Academic Setup, PDF Resume Upload, Apply to Drives, View Rejection Feedback |
+| **Internship** | CDPC Admin | `admin@rknec.edu` | `Admin@12345` | CDPC Review Queue, Flag Inspection, Approve/Reject Offers, Edit Policy Rules |
+| **Internship** | Student Candidate | `student1@rknec.edu` | `Student@12345` | Submit Offer Details + PDF, View Real-Time Policy Audit & NOC Status |
+
+> **Domain Restriction:** All user registration and login endpoints enforce the `@rknec.edu` domain. Non-campus email addresses are rejected with `400 Bad Request`.
+
+---
+
+## 🧪 Running Tests & Production Builds
+
+### Automated Backend Test Suites (JUnit 5 + Mockito)
+
+```powershell
+# Run TPMS backend tests (21 tests)
+cd c:\Users\Lenovo\Downloads\PlacementOS\tpms\backend
+mvn test
+
+# Run Internship Approval backend tests (20 tests)
+cd c:\Users\Lenovo\Downloads\PlacementOS\internship-approval\backend
+mvn test
+```
+
+### Production Frontend Builds (Vite)
+
+```powershell
+# Build TPMS frontend
+cd c:\Users\Lenovo\Downloads\PlacementOS\tpms\frontend
+npm run build
+
+# Build Internship Approval frontend
+cd c:\Users\Lenovo\Downloads\PlacementOS\internship-approval\frontend
+npm run build
+```
+
+---
+
+## 📚 Documentation & Reference Guides
+
+Comprehensive documentation and testing guides are available across the repository:
+
+* 📖 **[TESTING_GUIDE.md](file:///c:/Users/Lenovo/Downloads/PlacementOS/TESTING_GUIDE.md)**: Comprehensive manual testing walkthrough and cURL API testing reference.
+* ⚡ **[QUICK_TEST_CHEATSHEET.md](file:///c:/Users/Lenovo/Downloads/PlacementOS/QUICK_TEST_CHEATSHEET.md)**: Copy-paste sample job descriptions, test credentials, and form inputs.
+* 📘 **[PROJECT_EXPLANATION.md](file:///c:/Users/Lenovo/Downloads/PlacementOS/PROJECT_EXPLANATION.md)**: Complete system masterguide, architectural mental models, and deep-dive microservice breakdown.
+* 📊 **[PROJECT_DOCUMENTATION_REPORT.md](file:///c:/Users/Lenovo/Downloads/PlacementOS/PROJECT_DOCUMENTATION_REPORT.md)**: Technical architecture report, database ERD schema, and endpoint inventory.
+* 📅 **[PROJECT_DEVELOPMENT_TIMELINE.md](file:///c:/Users/Lenovo/Downloads/PlacementOS/PROJECT_DEVELOPMENT_TIMELINE.md)**: Week-by-week sprint timeline, Mermaid Gantt chart, and presentation slides.
+* 🎯 **[PLACEMENTOS_PITCH_AND_UNDERSTANDING_REPORT.md](file:///c:/Users/Lenovo/Downloads/PlacementOS/PLACEMENTOS_PITCH_AND_UNDERSTANDING_REPORT.md)**: Executive elevator pitches, 4-act live demo script, and stakeholder defense Q&A.
+* 🔍 **[PLACEMENTOS_COMPREHENSIVE_AUDIT_REPORT.md](file:///c:/Users/Lenovo/Downloads/PlacementOS/PLACEMENTOS_COMPREHENSIVE_AUDIT_REPORT.md)**: Verification audit report covering ideation evolution, built proof, and prioritized remaining backlog.

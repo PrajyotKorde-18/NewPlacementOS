@@ -7,9 +7,9 @@ spring:
   application:
     name: internship-approval-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/internship_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/internship_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:Arjun}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -22,9 +22,9 @@ spring:
 
 app:
   auth:
-    jwt-secret: ${JWT_SECRET:b5fdcda6d2fac77740f1edac9926630fedb032c696a707cf81438282219d09f74}
-    jwt-expiration-ms: 86400000 # 24 hours
-    allowed-email-domain: rknec.edu
+    jwt-secret: ${JWT_SECRET:}
+    jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
+    allowed-email-domain: ${ALLOWED_EMAIL_DOMAIN:rknec.edu}
   bootstrap:
     admin-email: ${BOOTSTRAP_ADMIN_EMAIL:admin@rknec.edu}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:Admin@12345}

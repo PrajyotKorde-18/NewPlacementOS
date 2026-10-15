@@ -18,7 +18,7 @@ The system leverages **Groq Large Language Models (LLM)** to parse unstructured 
 ## 2. Technical Stack & Architecture
 
 ### Backend Architecture
-- **Framework:** Spring Boot 3.x with Java 21
+- **Framework:** Spring Boot 3.x with Java 17
 - **Security:** Spring Security + Stateless JWT Authentication & Role-Based Access Control (RBAC)
 - **Persistence:** Spring Data JPA / Hibernate with Relational Database (MySQL / Oracle / H2)
 - **AI / LLM Integration:** Groq Cloud API (`llama-3.3-70b-versatile` / `llama3-70b-8192`) with JSON schema enforcement and robust offline mock fallback

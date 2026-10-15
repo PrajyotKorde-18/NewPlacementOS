@@ -5,23 +5,32 @@ node_modules/
 
 # Build outputs
 target/
+**/target/
 dist/
+**/dist/
 build/
+**/build/
 out/
+**/out/
 *.jar
 *.war
 *.ear
 
 # Logs
 *.log
+**/*.log
 logs/
+**/logs/
 
 # Temporary files & diffs
 tmp/
+**/tmp/
 tmp_diff.txt
+*tmp_diff*
 
 # Uploads & local storage
 uploads/
+**/uploads/
 
 # IDE & Editor configuration
 .idea/
@@ -30,12 +39,13 @@ uploads/
 .project
 .settings/
 
-# Environment files
+# Environment files & secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
 # Operating System files
 .DS_Store
