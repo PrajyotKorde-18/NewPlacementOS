@@ -22,9 +22,14 @@ public class InternshipSubmissionController {
 
     @PostMapping(value = "/submit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<InternshipResponseDTO> submitOffer(
-            @jakarta.validation.Valid @RequestPart("data") InternshipSubmissionDTO dto,
+            @jakarta.validation.Valid @RequestPart(value = "dto", required = false) InternshipSubmissionDTO dtoPart,
+            @jakarta.validation.Valid @RequestPart(value = "data", required = false) InternshipSubmissionDTO dataPart,
             @RequestPart(value = "file", required = false) MultipartFile offerLetterFile
     ) throws IOException {
+        InternshipSubmissionDTO dto = dtoPart != null ? dtoPart : dataPart;
+        if (dto == null) {
+            throw new IllegalArgumentException("Submission payload (part 'dto' or 'data') is required.");
+        }
         InternshipResponseDTO response = submissionService.submitOffer(dto, offerLetterFile);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

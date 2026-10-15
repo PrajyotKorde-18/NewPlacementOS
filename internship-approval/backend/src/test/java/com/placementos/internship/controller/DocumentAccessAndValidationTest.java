@@ -149,4 +149,132 @@ public class DocumentAccessAndValidationTest {
                         .content("{\"name\":\"\",\"email\":\"not-valid\",\"password\":\"\"}"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @WithMockUser(username = "alice@rknec.edu", roles = {"STUDENT"})
+    void testSubmitOffer_FrontendMultipartFormat_Accepted() throws Exception {
+        String jsonPayload = """
+                {
+                    "studentId": %d,
+                    "companyName": "Tech Innovators Inc",
+                    "roleTitle": "Software Intern",
+                    "durationWeeks": 12,
+                    "stipend": 25000,
+                    "startDate": "2026-06-01",
+                    "endDate": "2026-08-31",
+                    "mode": "ON_SITE",
+                    "hrContactEmail": "hr@techinnovators.com"
+                }
+                """.formatted(ownerUser.getId());
+
+        org.springframework.mock.web.MockMultipartFile dtoPart = new org.springframework.mock.web.MockMultipartFile(
+                "dto",
+                "",
+                "application/json",
+                jsonPayload.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        );
+
+        org.springframework.mock.web.MockMultipartFile filePart = new org.springframework.mock.web.MockMultipartFile(
+                "file",
+                "sample_offer.pdf",
+                "application/pdf",
+                "%PDF-1.4 sample genuine pdf content".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/internships/submit")
+                        .file(dtoPart)
+                        .file(filePart))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @WithMockUser(username = "alice@rknec.edu", roles = {"STUDENT"})
+    void testSubmitOffer_ValidPdfGeneratedByPdfBox_Accepted() throws Exception {
+        byte[] pdfBytes;
+        try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
+            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage();
+            document.addPage(page);
+            try (org.apache.pdfbox.pdmodel.PDPageContentStream contentStream =
+                         new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 12);
+                contentStream.newLineAtOffset(100, 700);
+                contentStream.showText("Official Internship Offer Letter");
+                contentStream.endText();
+            }
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            document.save(baos);
+            pdfBytes = baos.toByteArray();
+        }
+
+        String jsonPayload = """
+                {
+                    "studentId": %d,
+                    "companyName": "Enterprise Solutions Corp",
+                    "roleTitle": "Backend Engineer Intern",
+                    "durationWeeks": 10,
+                    "stipend": 30000,
+                    "startDate": "2026-07-01",
+                    "endDate": "2026-09-15",
+                    "mode": "HYBRID",
+                    "hrContactEmail": "hr@enterprisesolutions.com"
+                }
+                """.formatted(ownerUser.getId());
+
+        org.springframework.mock.web.MockMultipartFile dtoPart = new org.springframework.mock.web.MockMultipartFile(
+                "dto",
+                "",
+                "application/json",
+                jsonPayload.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        );
+
+        org.springframework.mock.web.MockMultipartFile filePart = new org.springframework.mock.web.MockMultipartFile(
+                "file",
+                "enterprise_offer.pdf",
+                "application/pdf",
+                pdfBytes
+        );
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/internships/submit")
+                        .file(dtoPart)
+                        .file(filePart))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @WithMockUser(username = "alice@rknec.edu", roles = {"STUDENT"})
+    void testSubmitOffer_CorruptOrInvalidPdf_ReturnsBadRequest() throws Exception {
+        String jsonPayload = """
+                {
+                    "studentId": %d,
+                    "companyName": "Fake Corp",
+                    "roleTitle": "Intern",
+                    "durationWeeks": 8,
+                    "stipend": 20000,
+                    "startDate": "2026-06-01",
+                    "endDate": "2026-08-01",
+                    "mode": "ON_SITE",
+                    "hrContactEmail": "hr@fakecorp.com"
+                }
+                """.formatted(ownerUser.getId());
+
+        org.springframework.mock.web.MockMultipartFile dtoPart = new org.springframework.mock.web.MockMultipartFile(
+                "dto",
+                "",
+                "application/json",
+                jsonPayload.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        );
+
+        org.springframework.mock.web.MockMultipartFile fakeFile = new org.springframework.mock.web.MockMultipartFile(
+                "file",
+                "fake.pdf",
+                "application/pdf",
+                "NOT_A_REAL_PDF_HEADER_CONTENT".getBytes(java.nio.charset.StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/internships/submit")
+                        .file(dtoPart)
+                        .file(fakeFile))
+                .andExpect(status().isBadRequest());
+    }
 }

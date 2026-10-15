@@ -38,14 +38,14 @@ public class FileUploadValidator {
 
         // Verify magic bytes
         try (InputStream is = file.getInputStream()) {
-            byte[] header = new byte[8];
+            byte[] header = new byte[1024];
             int read = is.read(header);
             if (read < 4) {
                 throw new IllegalArgumentException("File is corrupted or too small to be valid.");
             }
 
             if ("pdf".equals(extension)) {
-                if (!matchesHeader(header, PDF_MAGIC)) {
+                if (!isPdf(header, read)) {
                     throw new IllegalArgumentException("File content does not match PDF format signature.");
                 }
             } else if ("docx".equals(extension)) {
@@ -62,6 +62,22 @@ public class FileUploadValidator {
         } catch (IOException e) {
             throw new IllegalArgumentException("Unable to read uploaded file content: " + e.getMessage());
         }
+    }
+
+    private static boolean isPdf(byte[] buffer, int length) {
+        if (length < PDF_MAGIC.length) return false;
+        // ISO 32000-1 allows %PDF- within the first 1024 bytes
+        for (int i = 0; i <= length - PDF_MAGIC.length; i++) {
+            boolean match = true;
+            for (int j = 0; j < PDF_MAGIC.length; j++) {
+                if (buffer[i + j] != PDF_MAGIC[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) return true;
+        }
+        return false;
     }
 
     private static boolean matchesHeader(byte[] header, byte[] magic) {
