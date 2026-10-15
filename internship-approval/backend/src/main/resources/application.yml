@@ -27,7 +27,7 @@ app:
     allowed-email-domain: ${ALLOWED_EMAIL_DOMAIN:rknec.edu}
   bootstrap:
     admin-email: ${BOOTSTRAP_ADMIN_EMAIL:admin@rknec.edu}
-    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:Admin@12345}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
     admin-name: ${BOOTSTRAP_ADMIN_NAME:System CDPC Admin}
     admin-college-id: ${BOOTSTRAP_ADMIN_COLLEGE_ID:ADMIN001}
 

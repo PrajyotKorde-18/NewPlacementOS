@@ -1,12 +1,9 @@
-app:
-  auth:
-    jwt-secret: test_jwt_secret_key_mock_for_unit_testing_only_1234567890_abcdef
-    jwt-expiration-ms: 86400000
-    allowed-email-domain: rknec.edu
+server:
+  port: 0
 
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    url: jdbc:h2:mem:tpms_test_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -14,3 +11,15 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
+    show-sql: false
+
+app:
+  auth:
+    jwt-secret: test_jwt_secret_key_mock_for_unit_testing_only_1234567890_abcdef
+    jwt-expiration-ms: 86400000
+    allowed-email-domain: rknec.edu
+  groq:
+    mock-mode: true
+  bootstrap:
+    coordinator-email: coord_user@rknec.edu
+    coordinator-password: TestCoord@12345

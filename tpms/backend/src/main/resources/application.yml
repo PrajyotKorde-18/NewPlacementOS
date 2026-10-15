@@ -23,7 +23,7 @@ spring:
 app:
   bootstrap:
     coordinator-email: ${BOOTSTRAP_COORDINATOR_EMAIL:coord_user@rknec.edu}
-    coordinator-password: ${BOOTSTRAP_COORDINATOR_PASSWORD:Coord@12345}
+    coordinator-password: ${BOOTSTRAP_COORDINATOR_PASSWORD:}
   auth:
     jwt-secret: ${JWT_SECRET:}
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24 hours
