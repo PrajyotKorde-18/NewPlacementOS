@@ -96,6 +96,26 @@ export const api = {
     return response.json();
   },
 
+  // Download NOC PDF File
+  downloadNocPdf: async (requestId) => {
+    const response = await fetch(`${API_BASE_URL}/internships/${requestId}/noc-file`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'Failed to download NOC PDF' }));
+      throw new Error(err.message || 'Failed to download NOC PDF');
+    }
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `NOC_Request_${requestId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
   // Policy Rules CRUD
   getPolicyRules: async () => {
     const response = await fetch(`${API_BASE_URL}/policy-rules`, {

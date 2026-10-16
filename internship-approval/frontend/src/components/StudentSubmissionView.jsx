@@ -18,6 +18,7 @@ export function StudentSubmissionView({ currentUser, onOpenAuth }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [error, setError] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const [submissionsList, setSubmissionsList] = useState([]);
 
@@ -41,6 +42,18 @@ export function StudentSubmissionView({ currentUser, onOpenAuth }) {
       }
     } catch (e) {
       console.error('Failed to load student submissions', e);
+    }
+  };
+
+  const handleDownloadNoc = async (requestId) => {
+    try {
+      setDownloadingId(requestId);
+      await api.downloadNocPdf(requestId);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to download NOC PDF: ' + (err.message || 'Unknown error'));
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -381,15 +394,19 @@ export function StudentSubmissionView({ currentUser, onOpenAuth }) {
                 </div>
 
                 {item.status === 'MANUALLY_APPROVED' && (
-                  <a
-                    href={`http://localhost:8081/api/internships/${item.id}/noc`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-4 py-2 bg-[var(--success)] hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors flex items-center space-x-2 self-start md:self-auto"
+                  <button
+                    type="button"
+                    disabled={downloadingId === item.id}
+                    onClick={() => handleDownloadNoc(item.id)}
+                    className="px-4 py-2 bg-[var(--success)] hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-sm transition-colors flex items-center space-x-2 self-start md:self-auto cursor-pointer disabled:opacity-50"
                   >
-                    <Download className="w-4 h-4" />
-                    <span>Download Official NOC PDF</span>
-                  </a>
+                    {downloadingId === item.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    <span>{downloadingId === item.id ? 'Downloading...' : 'Download Official NOC PDF'}</span>
+                  </button>
                 )}
               </div>
             ))}

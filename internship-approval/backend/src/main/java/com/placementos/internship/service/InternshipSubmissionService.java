@@ -29,6 +29,8 @@ public class InternshipSubmissionService {
     private final RuleEvaluatorService ruleEvaluatorService;
     private final ScamPatternDetectorService scamPatternDetectorService;
     private final com.placementos.internship.repository.NocRecordRepository nocRecordRepository;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private NocPdfGeneratorService nocPdfGeneratorService;
 
     public InternshipSubmissionService(
             InternshipRequestRepository requestRepository,
@@ -61,11 +63,11 @@ public class InternshipSubmissionService {
 
     private Student resolveStudent(Long studentId) {
         if (studentId != null) {
-            java.util.Optional<Student> byId = studentRepository.findById(studentId);
-            if (byId.isPresent()) return byId.get();
-
             java.util.Optional<Student> byUser = studentRepository.findByUserId(studentId);
             if (byUser.isPresent()) return byUser.get();
+
+            java.util.Optional<Student> byId = studentRepository.findById(studentId);
+            if (byId.isPresent()) return byId.get();
 
             User user = userRepository.findById(studentId).orElse(null);
             if (user != null) {
@@ -192,9 +194,18 @@ public class InternshipSubmissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
 
         boolean isStaff = requester.getRole() == Role.CDPC_STAFF || requester.getRole() == Role.CDPC_ADMIN;
-        boolean isOwner = request.getStudent() != null
-                && request.getStudent().getUser() != null
-                && requester.getId().equals(request.getStudent().getUser().getId());
+        boolean isOwner = false;
+        if (request.getStudent() != null) {
+            if (request.getStudent().getUser() != null) {
+                if (requester.getId().equals(request.getStudent().getUser().getId())
+                        || (requester.getEmail() != null && requester.getEmail().equalsIgnoreCase(request.getStudent().getUser().getEmail()))) {
+                    isOwner = true;
+                }
+            }
+            if (requester.getId().equals(request.getStudent().getId())) {
+                isOwner = true;
+            }
+        }
 
         if (!isStaff && !isOwner) {
             throw new com.placementos.internship.exception.AppException("Access denied: You do not have permission to download this offer letter", org.springframework.http.HttpStatus.FORBIDDEN);
@@ -224,9 +235,18 @@ public class InternshipSubmissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Authenticated user not found"));
 
         boolean isStaff = requester.getRole() == Role.CDPC_STAFF || requester.getRole() == Role.CDPC_ADMIN;
-        boolean isOwner = request.getStudent() != null
-                && request.getStudent().getUser() != null
-                && requester.getId().equals(request.getStudent().getUser().getId());
+        boolean isOwner = false;
+        if (request.getStudent() != null) {
+            if (request.getStudent().getUser() != null) {
+                if (requester.getId().equals(request.getStudent().getUser().getId())
+                        || (requester.getEmail() != null && requester.getEmail().equalsIgnoreCase(request.getStudent().getUser().getEmail()))) {
+                    isOwner = true;
+                }
+            }
+            if (requester.getId().equals(request.getStudent().getId())) {
+                isOwner = true;
+            }
+        }
 
         if (!isStaff && !isOwner) {
             throw new com.placementos.internship.exception.AppException("Access denied: You do not have permission to download this NOC document", org.springframework.http.HttpStatus.FORBIDDEN);
@@ -236,6 +256,17 @@ public class InternshipSubmissionService {
         String pdfPath = noc != null ? noc.getPdfPath() : "uploads/noc/NOC_Request_" + requestId + ".pdf";
 
         Path path = Paths.get(pdfPath);
+        if (!Files.exists(path) || Files.size(path) <= 50) {
+            if (nocPdfGeneratorService != null && request.getStatus() == InternshipRequestStatus.MANUALLY_APPROVED) {
+                try {
+                    User approver = (noc != null && noc.getApprovedBy() != null) ? noc.getApprovedBy() : requester;
+                    String token = (noc != null && noc.getVerificationToken() != null) ? noc.getVerificationToken() : "DEMO_TOKEN";
+                    nocPdfGeneratorService.generateNocPdf(request, approver, token);
+                } catch (Exception ignored) {
+                }
+            }
+        }
+
         if (!Files.exists(path)) {
             throw new ResourceNotFoundException("NOC document not found on disk");
         }
