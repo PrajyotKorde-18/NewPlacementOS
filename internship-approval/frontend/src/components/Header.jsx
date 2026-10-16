@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldCheck, FileText, Settings, ShieldAlert, LogOut, User } from 'lucide-react';
+import { ShieldCheck, FileText, Settings, ShieldAlert, LogOut, User, QrCode } from 'lucide-react';
 
 export function Header({
   activeTab,
@@ -68,6 +68,15 @@ export function Header({
                 </button>
               </>
             )}
+
+            <a
+              href="/verify-noc"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-transparent hover:border-emerald-200 transition-all"
+              title="Verify Official Institutional NOC Certificate"
+            >
+              <QrCode className="w-4 h-4 text-emerald-600" />
+              <span>Verify NOC</span>
+            </a>
           </nav>
 
           {/* Logged In User Badge & Logout */}
