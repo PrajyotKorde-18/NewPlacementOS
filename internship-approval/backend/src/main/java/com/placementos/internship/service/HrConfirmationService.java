@@ -130,7 +130,8 @@ public class HrConfirmationService {
      */
     @Transactional
     public void processInitialSubmission(Long requestId) {
-        InternshipRequest request = requestRepository.findById(requestId).orElse(null);
+        InternshipRequest request = requestRepository.findByIdWithStudentAndUser(requestId)
+                .orElseGet(() -> requestRepository.findById(requestId).orElse(null));
         if (request == null) return;
 
         HrConfirmation existing = hrConfirmationRepository.findByRequestId(requestId).orElse(null);
@@ -384,7 +385,7 @@ public class HrConfirmationService {
      */
     @Transactional
     public InternshipResponseDTO resendHrEmail(Long requestId, User actioner) {
-        InternshipRequest request = requestRepository.findById(requestId)
+        InternshipRequest request = requestRepository.findByIdWithStudentAndUser(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Internship request not found with id: " + requestId));
 
         HrConfirmation conf = hrConfirmationRepository.findByRequestId(requestId).orElse(null);

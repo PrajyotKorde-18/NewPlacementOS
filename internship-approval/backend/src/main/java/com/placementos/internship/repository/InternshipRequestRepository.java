@@ -17,4 +17,8 @@ public interface InternshipRequestRepository extends JpaRepository<InternshipReq
     List<InternshipRequest> findByCompanyNameIgnoreCaseAndCreatedAtAfter(String companyName, LocalDateTime cutoffDate);
     List<InternshipRequest> findByHrContactEmailIgnoreCaseAndCreatedAtAfter(String hrContactEmail, LocalDateTime cutoffDate);
     List<InternshipRequest> findByOfferLetterHashAndCreatedAtAfter(String offerLetterHash, LocalDateTime cutoffDate);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM InternshipRequest r LEFT JOIN FETCH r.student s LEFT JOIN FETCH s.user WHERE r.id = :id")
+    java.util.Optional<InternshipRequest> findByIdWithStudentAndUser(@org.springframework.data.repository.query.Param("id") Long id);
 }
+
