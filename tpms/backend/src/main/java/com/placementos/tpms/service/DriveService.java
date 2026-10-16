@@ -12,6 +12,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import com.placementos.tpms.event.DrivePublishedEvent;
+import com.placementos.tpms.event.RejectionFeedbackAvailableEvent;
+import com.placementos.tpms.event.StudentShortlistedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -30,6 +34,7 @@ public class DriveService {
     private final UserRepository userRepository;
     private final ScoringEngineService scoringEngineService;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public DriveDTO createDrive(DriveDTO driveDTO, String userEmail) {
@@ -58,6 +63,9 @@ public class DriveService {
         if (roleProfileDTO != null) {
             saveRoleProfile(drive, roleProfileDTO);
         }
+
+        // Publish event for transactional notification listener
+        eventPublisher.publishEvent(new DrivePublishedEvent(drive.getId()));
 
         return mapToDriveDTO(drive);
     }
@@ -272,6 +280,15 @@ public class DriveService {
         }
 
         List<Application> savedApps = applicationRepository.saveAll(applications);
+
+        // Publish events for transactional notification listeners
+        for (Application app : savedApps) {
+            if (app.getStatus() == ApplicationStatus.SHORTLISTED || app.getStatus() == ApplicationStatus.OVERRIDDEN_INCLUDED) {
+                eventPublisher.publishEvent(new StudentShortlistedEvent(app.getId(), drive.getId(), app.getStudent().getId()));
+            } else if (app.getStatus() == ApplicationStatus.NOT_SHORTLISTED || app.getStatus() == ApplicationStatus.OVERRIDDEN_EXCLUDED) {
+                eventPublisher.publishEvent(new RejectionFeedbackAvailableEvent(app.getId(), drive.getId(), app.getStudent().getId()));
+            }
+        }
 
         List<ApplicationResponseDTO> dtos = new ArrayList<>();
         for (Application app : savedApps) {

@@ -15,6 +15,9 @@ import com.placementos.tpms.repository.StudentRepository;
 import com.placementos.tpms.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.placementos.tpms.event.RejectionFeedbackAvailableEvent;
+import com.placementos.tpms.event.StudentShortlistedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,16 +30,19 @@ public class ApplicationService {
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
             StudentRepository studentRepository,
             UserRepository userRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            ApplicationEventPublisher eventPublisher) {
         this.applicationRepository = applicationRepository;
         this.studentRepository = studentRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -66,6 +72,12 @@ public class ApplicationService {
         application = applicationRepository.save(application);
         log.info("Coordinator User ID {} overridden Application ID {} status to {} with reason: {}",
                 coordinator != null ? coordinator.getId() : null, applicationId, targetStatus, request.getOverrideReason());
+
+        if (targetStatus == ApplicationStatus.OVERRIDDEN_INCLUDED) {
+            eventPublisher.publishEvent(new StudentShortlistedEvent(application.getId(), application.getDrive().getId(), application.getStudent().getId()));
+        } else if (targetStatus == ApplicationStatus.OVERRIDDEN_EXCLUDED) {
+            eventPublisher.publishEvent(new RejectionFeedbackAvailableEvent(application.getId(), application.getDrive().getId(), application.getStudent().getId()));
+        }
 
         return mapToApplicationResponseDTO(application);
     }

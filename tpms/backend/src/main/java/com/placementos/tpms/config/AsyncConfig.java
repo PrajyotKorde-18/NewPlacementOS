@@ -47,6 +47,19 @@ public class AsyncConfig implements AsyncConfigurer {
         return executor;
     }
 
+    @Bean(name = "notificationTaskExecutor")
+    public ThreadPoolTaskExecutor notificationTaskExecutor() {
+        log.info("[AsyncConfig] Initializing bounded notificationTaskExecutor: coreSize=2, maxSize=5, queueCapacity=50");
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(5);
+        executor.setQueueCapacity(50);
+        executor.setThreadNamePrefix("TPMS-Notify-Async-");
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
+    }
+
     @Override
     public Executor getAsyncExecutor() {
         return resumeTaskExecutor();

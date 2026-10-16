@@ -30,4 +30,8 @@ app:
     verification-secret: "test_noc_verification_secret_min_32_characters_key"
   verification:
     base-url: "http://localhost:3001/verify-noc"
+  notifications:
+    enabled: false
+  frontend:
+    base-url: "http://localhost:3001"
 

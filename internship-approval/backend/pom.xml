@@ -64,6 +64,12 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
 
+        <!-- Mail Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- JWT Support -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

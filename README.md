@@ -102,6 +102,11 @@ $env:BOOTSTRAP_ADMIN_PASSWORD="Admin@12345"
 
 # NOC Verification HMAC Secret (Required outside demo profile, min 32 chars)
 $env:NOC_VERIFICATION_SECRET="<generate-with-openssl-rand-hex-32>"
+
+# Optional Email Notification Configuration (MailHog)
+$env:NOTIFICATIONS_ENABLED="false"
+$env:MAIL_HOST="localhost"
+$env:MAIL_PORT="1025"
 ```
 
 ### Required Variables (Bash / Linux / macOS)
@@ -116,6 +121,9 @@ export BOOTSTRAP_COORDINATOR_PASSWORD="Coord@12345"
 export BOOTSTRAP_ADMIN_EMAIL="admin@rknec.edu"
 export BOOTSTRAP_ADMIN_PASSWORD="Admin@12345"
 export NOC_VERIFICATION_SECRET="$(openssl rand -hex 32)"
+export NOTIFICATIONS_ENABLED="false"
+export MAIL_HOST="localhost"
+export MAIL_PORT="1025"
 ```
 
 ---
@@ -175,6 +183,28 @@ npm install
 npm run dev
 ```
 *Access in Browser:* `http://localhost:3001`
+
+### Optional: Local Email Testing with MailHog
+
+Both microservices support asynchronous transactional email notifications. By default, `NOTIFICATIONS_ENABLED=false` so the applications boot cleanly with zero mail setup.
+
+To test emails locally with MailHog:
+
+1. **Start MailHog via Docker:**
+   ```powershell
+   docker run -d -p 1025:1025 -p 8025:8025 --name mailhog mailhog/mailhog
+   ```
+   *(Or download the standalone binary for Windows from [MailHog Releases](https://github.com/mailhog/MailHog/releases) and execute `MailHog_windows_amd64.exe`)*.
+
+2. **Access MailHog Web Inbox:**
+   Open `http://localhost:8025` in your browser.
+
+3. **Enable Notifications in Backends:**
+   Set the environment variable before starting the backends:
+   ```powershell
+   $env:NOTIFICATIONS_ENABLED="true"
+   ```
+   SMTP messages will be delivered to `localhost:1025` and viewable in the MailHog web UI, with audit records persisted to the `notification_logs` table (no bodies stored).
 
 ---
 

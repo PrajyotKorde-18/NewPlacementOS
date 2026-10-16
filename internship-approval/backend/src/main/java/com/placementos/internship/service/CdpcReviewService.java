@@ -12,6 +12,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.placementos.internship.event.InternshipApprovedEvent;
+import com.placementos.internship.event.InternshipRejectedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -26,6 +29,7 @@ public class CdpcReviewService {
     private final NocRecordRepository nocRecordRepository;
     private final NocPdfGeneratorService nocPdfGeneratorService;
     private final NocVerificationTokenService nocVerificationTokenService;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final List<InternshipRequestStatus> PENDING_QUEUE_STATUSES = List.of(
             InternshipRequestStatus.SUBMITTED,
@@ -78,7 +82,10 @@ public class CdpcReviewService {
                 .verificationToken(token)
                 .qrGeneratedAt(approvedAt)
                 .build();
-        nocRecordRepository.save(nocRecord);
+        nocRecord = nocRecordRepository.save(nocRecord);
+
+        // Publish event for transactional notification listener
+        eventPublisher.publishEvent(new InternshipApprovedEvent(request.getId(), nocRecord.getId()));
 
         log.info("[CDPC ACTION] Internship Request #{} MANUALLY_APPROVED by authenticated CDPC staff '{}' (ID: {}, Email: {}, Role: {}). NOC generated at '{}'.",
                 request.getId(), approver.getName(), approver.getId(), approver.getEmail(), approver.getRole(), pdfPath);
@@ -108,6 +115,9 @@ public class CdpcReviewService {
         request.setStatus(InternshipRequestStatus.MANUALLY_REJECTED);
         request.setRejectionReason(rejectionReason.trim());
         request = requestRepository.save(request);
+
+        // Publish event for transactional notification listener
+        eventPublisher.publishEvent(new InternshipRejectedEvent(request.getId(), rejectionReason.trim()));
 
         log.info("[CDPC ACTION] Internship Request #{} MANUALLY_REJECTED by authenticated CDPC staff '{}' (ID: {}, Email: {}, Role: {}). Reason: '{}'.",
                 request.getId(), actioner.getName(), actioner.getId(), actioner.getEmail(), actioner.getRole(), rejectionReason.trim());
