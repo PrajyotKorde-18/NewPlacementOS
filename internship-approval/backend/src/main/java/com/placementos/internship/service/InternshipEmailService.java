@@ -59,8 +59,8 @@ public class InternshipEmailService {
         try {
             MimeMessage mimeMessage = mailSender.createMimeMessage();
             boolean isMultipart = attachmentFile != null && attachmentFile.exists();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, isMultipart, "UTF-8");
-            helper.setFrom(mailFrom);
+            String sender = (mailFrom != null && !mailFrom.isBlank()) ? mailFrom.trim() : "noreply@placementos.local";
+            helper.setFrom(sender);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlBody, true);

@@ -46,7 +46,7 @@ public class HrConfirmationService {
     @Value("${app.frontend.base-url:http://localhost:3001}")
     private String frontendBaseUrl;
 
-    @Value("${spring.mail.username:noreply@placementos.local}")
+    @Value("${app.notifications.mail-from:noreply@placementos.local}")
     private String mailFrom;
 
     private static final Set<String> DEMO_HR_DOMAINS = Set.of(
@@ -201,6 +201,11 @@ public class HrConfirmationService {
         String safeCompany = HtmlUtils.htmlEscape(request.getCompanyName() != null ? request.getCompanyName() : "your organization");
         String safeRole = HtmlUtils.htmlEscape(request.getRoleTitle() != null ? request.getRoleTitle() : "Intern");
         String confirmUrl = frontendBaseUrl.replaceAll("/+$", "") + "/hr-confirm?token=" + rawToken;
+        log.info("===============================================================================");
+        log.info("[HR CONFIRMATION LINK GENERATED]");
+        log.info("Recipient HR: {}", hrEmail);
+        log.info("Verification URL: {}", confirmUrl);
+        log.info("===============================================================================");
 
         String htmlBody = """
             <!DOCTYPE html>
@@ -242,7 +247,8 @@ public class HrConfirmationService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
-            helper.setFrom(mailFrom);
+            String sender = (mailFrom != null && !mailFrom.isBlank()) ? mailFrom.trim() : "noreply@placementos.local";
+            helper.setFrom(sender);
             helper.setTo(hrEmail);
             helper.setSubject(subject);
             helper.setText(htmlBody, true);

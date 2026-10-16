@@ -58,7 +58,7 @@ app:
   verification:
     base-url: ${VERIFICATION_BASE_URL:http://localhost:3001/verify-noc}
   notifications:
-    enabled: ${NOTIFICATIONS_ENABLED:false}
+    enabled: ${NOTIFICATIONS_ENABLED:true}
     mail-from: ${MAIL_FROM:noreply@placementos.local}
   frontend:
     base-url: ${FRONTEND_BASE_URL:http://localhost:3001}
