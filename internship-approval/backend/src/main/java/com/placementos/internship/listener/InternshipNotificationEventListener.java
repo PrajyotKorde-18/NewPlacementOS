@@ -29,7 +29,7 @@ public class InternshipNotificationEventListener {
 
     @Async("notificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, readOnly = true)
     public void onInternshipApproved(InternshipApprovedEvent event) {
         log.info("[INTERNSHIP NOTIFY] Handling InternshipApprovedEvent for request ID: {}", event.getRequestId());
         try {
@@ -55,7 +55,7 @@ public class InternshipNotificationEventListener {
 
     @Async("notificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, readOnly = true)
     public void onInternshipRejected(InternshipRejectedEvent event) {
         log.info("[INTERNSHIP NOTIFY] Handling InternshipRejectedEvent for request ID: {}", event.getRequestId());
         try {
