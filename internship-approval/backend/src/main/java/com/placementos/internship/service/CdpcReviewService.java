@@ -16,11 +16,11 @@ import com.placementos.internship.event.InternshipApprovedEvent;
 import com.placementos.internship.event.InternshipRejectedEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class CdpcReviewService {
 
@@ -30,6 +30,30 @@ public class CdpcReviewService {
     private final NocPdfGeneratorService nocPdfGeneratorService;
     private final NocVerificationTokenService nocVerificationTokenService;
     private final ApplicationEventPublisher eventPublisher;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public CdpcReviewService(
+            InternshipRequestRepository requestRepository,
+            UserRepository userRepository,
+            NocRecordRepository nocRecordRepository,
+            NocPdfGeneratorService nocPdfGeneratorService,
+            NocVerificationTokenService nocVerificationTokenService,
+            ApplicationEventPublisher eventPublisher) {
+        this.requestRepository = requestRepository;
+        this.userRepository = userRepository;
+        this.nocRecordRepository = nocRecordRepository;
+        this.nocPdfGeneratorService = nocPdfGeneratorService;
+        this.nocVerificationTokenService = nocVerificationTokenService != null ? nocVerificationTokenService : new NocVerificationTokenService();
+        this.eventPublisher = eventPublisher != null ? eventPublisher : event -> {};
+    }
+
+    public CdpcReviewService(
+            InternshipRequestRepository requestRepository,
+            UserRepository userRepository,
+            NocRecordRepository nocRecordRepository,
+            NocPdfGeneratorService nocPdfGeneratorService) {
+        this(requestRepository, userRepository, nocRecordRepository, nocPdfGeneratorService, null, null);
+    }
 
     private static final List<InternshipRequestStatus> PENDING_QUEUE_STATUSES = List.of(
             InternshipRequestStatus.SUBMITTED,
