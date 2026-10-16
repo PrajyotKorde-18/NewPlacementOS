@@ -30,6 +30,7 @@ public class CdpcReviewService {
     private final NocPdfGeneratorService nocPdfGeneratorService;
     private final NocVerificationTokenService nocVerificationTokenService;
     private final ApplicationEventPublisher eventPublisher;
+    private final HrConfirmationRepository hrConfirmationRepository;
 
     @org.springframework.beans.factory.annotation.Autowired
     public CdpcReviewService(
@@ -38,13 +39,15 @@ public class CdpcReviewService {
             NocRecordRepository nocRecordRepository,
             NocPdfGeneratorService nocPdfGeneratorService,
             NocVerificationTokenService nocVerificationTokenService,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) HrConfirmationRepository hrConfirmationRepository) {
         this.requestRepository = requestRepository;
         this.userRepository = userRepository;
         this.nocRecordRepository = nocRecordRepository;
         this.nocPdfGeneratorService = nocPdfGeneratorService;
         this.nocVerificationTokenService = nocVerificationTokenService != null ? nocVerificationTokenService : new NocVerificationTokenService();
         this.eventPublisher = eventPublisher != null ? eventPublisher : event -> {};
+        this.hrConfirmationRepository = hrConfirmationRepository;
     }
 
     public CdpcReviewService(
@@ -52,7 +55,7 @@ public class CdpcReviewService {
             UserRepository userRepository,
             NocRecordRepository nocRecordRepository,
             NocPdfGeneratorService nocPdfGeneratorService) {
-        this(requestRepository, userRepository, nocRecordRepository, nocPdfGeneratorService, null, null);
+        this(requestRepository, userRepository, nocRecordRepository, nocPdfGeneratorService, null, null, null);
     }
 
     private static final List<InternshipRequestStatus> PENDING_QUEUE_STATUSES = List.of(
@@ -82,6 +85,17 @@ public class CdpcReviewService {
             request.getStatus() == InternshipRequestStatus.MANUALLY_REJECTED) {
             throw new AppException("Internship request #" + requestId + " is already in terminal state '" +
                     request.getStatus() + "' and cannot be re-actioned.", HttpStatus.CONFLICT);
+        }
+
+        // Employer HR denial guard check: If HR denied this offer, approval is strictly blocked
+        if (hrConfirmationRepository != null) {
+            hrConfirmationRepository.findByRequestId(requestId).ifPresent(hrConf -> {
+                if (hrConf.getStatus() == HrConfirmationStatus.DENIED) {
+                    throw new AppException("Cannot approve internship offer #" + requestId +
+                            ": The employer HR contact has explicitly denied issuing this offer. Only rejection is permitted.",
+                            HttpStatus.BAD_REQUEST);
+                }
+            });
         }
 
         // Explicit human action transitions to MANUALLY_APPROVED
@@ -199,6 +213,20 @@ public class CdpcReviewService {
                     .collect(Collectors.toList());
         }
 
+        String hrStatus = null;
+        Integer hrResendCount = null;
+        LocalDateTime hrSentAt = null;
+        LocalDateTime hrRespondedAt = null;
+        if (hrConfirmationRepository != null) {
+            var hrConf = hrConfirmationRepository.findByRequestId(request.getId()).orElse(null);
+            if (hrConf != null) {
+                hrStatus = hrConf.getStatus() != null ? hrConf.getStatus().name() : null;
+                hrResendCount = hrConf.getResendCount();
+                hrSentAt = hrConf.getSentAt();
+                hrRespondedAt = hrConf.getRespondedAt();
+            }
+        }
+
         return InternshipResponseDTO.builder()
                 .id(request.getId())
                 .studentId(request.getStudent() != null ? request.getStudent().getId() : null)
@@ -217,6 +245,10 @@ public class CdpcReviewService {
                 .rejectionReason(request.getRejectionReason())
                 .createdAt(request.getCreatedAt())
                 .scamFlags(flagDTOs)
+                .hrConfirmationStatus(hrStatus)
+                .hrConfirmationResendCount(hrResendCount)
+                .hrConfirmationSentAt(hrSentAt)
+                .hrConfirmationRespondedAt(hrRespondedAt)
                 .build();
     }
 }
