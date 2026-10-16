@@ -175,7 +175,9 @@ public class HrConfirmationService {
             hrConf.setStatus(HrConfirmationStatus.PENDING);
             hrConf.setSentAt(now);
             hrConf.setExpiresAt(expiresAt);
-            hrConf.setResendCount(hrConf.getResendCount() + 1);
+            if (isResend && existingRecord.getStatus() != HrConfirmationStatus.NOT_SENT) {
+                hrConf.setResendCount(hrConf.getResendCount() + 1);
+            }
         } else {
             hrConf = HrConfirmation.builder()
                     .request(request)
@@ -257,9 +259,7 @@ public class HrConfirmationService {
             recordNotificationLog(hrEmail, subject, notificationType, "SUCCESS", null);
             log.info("[HR CONFIRM] Sent HR confirmation email to '{}' for Request #{} (Resend: {})", hrEmail, request.getId(), isResend);
         } catch (Exception e) {
-            log.error("[HR CONFIRM] Failed to send HR confirmation email to '{}' for Request #{}: {}", hrEmail, request.getId(), e.getMessage());
-            hrConf.setStatus(HrConfirmationStatus.NOT_SENT);
-            hrConfirmationRepository.save(hrConf);
+            log.warn("[HR CONFIRM] Could not deliver email via SMTP to '{}' for Request #{}: {}. Status remains PENDING so the link can still be used.", hrEmail, request.getId(), e.getMessage());
             recordNotificationLog(hrEmail, subject, notificationType, "FAILED", e.getMessage());
         }
     }
