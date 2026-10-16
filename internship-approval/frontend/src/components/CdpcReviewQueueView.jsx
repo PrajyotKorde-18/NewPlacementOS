@@ -327,12 +327,12 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
                     <span>Reject Offer</span>
                   </button>
 
-                  {(item.hrConfirmationStatus === 'PENDING' || item.hrConfirmationStatus === 'EXPIRED') && (
+                  {(item.hrConfirmationStatus === 'PENDING' || item.hrConfirmationStatus === 'EXPIRED' || item.hrConfirmationStatus === 'NOT_SENT' || !item.hrConfirmationStatus) && (
                     <button
                       onClick={() => handleResendHr(item.id)}
                       disabled={resendingId === item.id || (item.hrConfirmationResendCount || 0) >= 3}
                       className="flex-1 lg:flex-none px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors flex items-center justify-center space-x-1.5 disabled:opacity-50"
-                      title={(item.hrConfirmationResendCount || 0) >= 3 ? 'Maximum resend limit (3) reached' : 'Resend confirmation email to HR'}
+                      title={(item.hrConfirmationResendCount || 0) >= 3 ? 'Maximum resend limit (3) reached' : 'Send verification email to HR'}
                     >
                       {resendingId === item.id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600" />
@@ -340,9 +340,11 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
                         <>
                           <Mail className="w-3.5 h-3.5 text-slate-600" />
                           <span>
-                            {(item.hrConfirmationResendCount || 0) >= 3
-                              ? 'Resend Limit (3/3)'
-                              : `Resend HR Email ${item.hrConfirmationResendCount ? `(${item.hrConfirmationResendCount}/3)` : ''}`}
+                            {(!item.hrConfirmationStatus || item.hrConfirmationStatus === 'NOT_SENT')
+                              ? 'Send HR Email'
+                              : (item.hrConfirmationResendCount || 0) >= 3
+                                ? 'Resend Limit (3/3)'
+                                : `Resend HR Email ${item.hrConfirmationResendCount ? `(${item.hrConfirmationResendCount}/3)` : ''}`}
                           </span>
                         </>
                       )}
