@@ -31,6 +31,10 @@ public class InternshipSubmissionService {
     private final com.placementos.internship.repository.NocRecordRepository nocRecordRepository;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private NocPdfGeneratorService nocPdfGeneratorService;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.placementos.internship.repository.HrConfirmationRepository hrConfirmationRepository;
 
     public InternshipSubmissionService(
             InternshipRequestRepository requestRepository,
@@ -163,6 +167,10 @@ public class InternshipSubmissionService {
 
         request = requestRepository.save(request);
 
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.placementos.internship.event.InternshipSubmittedEvent(request.getId()));
+        }
+
         return mapToResponseDTO(request, ruleResults, scamFlags);
     }
 
@@ -290,6 +298,20 @@ public class InternshipSubmissionService {
                     .collect(Collectors.toList());
         }
 
+        String hrStatus = null;
+        Integer hrResendCount = null;
+        LocalDateTime hrSentAt = null;
+        LocalDateTime hrRespondedAt = null;
+        if (hrConfirmationRepository != null) {
+            var hrConf = hrConfirmationRepository.findByRequestId(request.getId()).orElse(null);
+            if (hrConf != null) {
+                hrStatus = hrConf.getStatus() != null ? hrConf.getStatus().name() : null;
+                hrResendCount = hrConf.getResendCount();
+                hrSentAt = hrConf.getSentAt();
+                hrRespondedAt = hrConf.getRespondedAt();
+            }
+        }
+
         return InternshipResponseDTO.builder()
                 .id(request.getId())
                 .studentId(request.getStudent().getId())
@@ -309,6 +331,10 @@ public class InternshipSubmissionService {
                 .createdAt(request.getCreatedAt())
                 .ruleEvaluations(ruleResults)
                 .scamFlags(flagDTOs)
+                .hrConfirmationStatus(hrStatus)
+                .hrConfirmationResendCount(hrResendCount)
+                .hrConfirmationSentAt(hrSentAt)
+                .hrConfirmationRespondedAt(hrRespondedAt)
                 .build();
     }
 }

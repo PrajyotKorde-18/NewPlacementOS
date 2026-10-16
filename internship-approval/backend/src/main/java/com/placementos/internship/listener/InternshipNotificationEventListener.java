@@ -5,8 +5,10 @@ import com.placementos.internship.entity.NocRecord;
 import com.placementos.internship.entity.Student;
 import com.placementos.internship.event.InternshipApprovedEvent;
 import com.placementos.internship.event.InternshipRejectedEvent;
+import com.placementos.internship.event.InternshipSubmittedEvent;
 import com.placementos.internship.repository.InternshipRequestRepository;
 import com.placementos.internship.repository.NocRecordRepository;
+import com.placementos.internship.service.HrConfirmationService;
 import com.placementos.internship.service.InternshipEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ public class InternshipNotificationEventListener {
     private final InternshipEmailService emailService;
     private final InternshipRequestRepository requestRepository;
     private final NocRecordRepository nocRecordRepository;
+    private final HrConfirmationService hrConfirmationService;
 
     @Async("notificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -67,6 +70,17 @@ public class InternshipNotificationEventListener {
             }
         } catch (Exception e) {
             log.error("[INTERNSHIP NOTIFY] Error processing InternshipRejectedEvent: {}", e.getMessage(), e);
+        }
+    }
+
+    @Async("notificationTaskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onInternshipSubmitted(InternshipSubmittedEvent event) {
+        log.info("[INTERNSHIP NOTIFY] Handling InternshipSubmittedEvent for request ID: {}", event.getRequestId());
+        try {
+            hrConfirmationService.processInitialSubmission(event.getRequestId());
+        } catch (Exception e) {
+            log.error("[INTERNSHIP NOTIFY] Error processing InternshipSubmittedEvent for request #{}: {}", event.getRequestId(), e.getMessage(), e);
         }
     }
 }

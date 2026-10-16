@@ -32,4 +32,8 @@ public class InternshipResponseDTO {
     private LocalDateTime createdAt;
     private List<RuleEvaluationResultDTO> ruleEvaluations;
     private List<ScamFlagDTO> scamFlags;
+    private String hrConfirmationStatus;
+    private Integer hrConfirmationResendCount;
+    private LocalDateTime hrConfirmationSentAt;
+    private LocalDateTime hrConfirmationRespondedAt;
 }

@@ -170,4 +170,36 @@ export const api = {
     const data = await response.json();
     return data;
   },
+
+  // HR Confirmation (Public - No Auth Required)
+  getHrConfirmationInfo: async (token) => {
+    const response = await fetch(`${API_BASE_URL}/public/hr-confirm/${encodeURIComponent(token)}`);
+    return response.json();
+  },
+
+  submitHrConfirmation: async (token, answer) => {
+    const response = await fetch(`${API_BASE_URL}/public/hr-confirm/${encodeURIComponent(token)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || data.error || 'Failed to submit confirmation');
+    }
+    return data;
+  },
+
+  // Staff Resend HR Email
+  resendHrEmail: async (requestId) => {
+    const response = await fetch(`${API_BASE_URL}/internships/${requestId}/resend-hr-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'Failed to resend HR email' }));
+      throw new Error(err.message || err.error || 'Failed to resend HR email');
+    }
+    return response.json();
+  },
 };

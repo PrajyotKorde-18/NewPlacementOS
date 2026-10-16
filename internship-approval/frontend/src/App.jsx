@@ -5,6 +5,7 @@ import { StudentSubmissionView } from './components/StudentSubmissionView';
 import { CdpcReviewQueueView } from './components/CdpcReviewQueueView';
 import { CdpcPolicyRulesView } from './components/CdpcPolicyRulesView';
 import { NocVerificationPage } from './components/NocVerificationPage';
+import { HrConfirmationPage } from './components/HrConfirmationPage';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -59,6 +60,11 @@ export function App() {
   // Public Verification Route (accessible logged in OR logged out)
   if (currentPath.startsWith('/verify-noc')) {
     return <NocVerificationPage onBackToLogin={() => navigateTo('/')} />;
+  }
+
+  // Public HR Confirmation Route (accessible logged in OR logged out)
+  if (currentPath.startsWith('/hr-confirm')) {
+    return <HrConfirmationPage onBackToLogin={() => navigateTo('/')} />;
   }
 
   // Entry Gatekeeper: If user is not logged in, render the Auth Landing Page exclusively!

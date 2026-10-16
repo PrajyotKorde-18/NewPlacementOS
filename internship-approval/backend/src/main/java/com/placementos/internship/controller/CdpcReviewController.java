@@ -20,9 +20,17 @@ import jakarta.validation.Valid;
 public class CdpcReviewController {
 
     private final CdpcReviewService cdpcReviewService;
+    private final com.placementos.internship.service.HrConfirmationService hrConfirmationService;
+    private final com.placementos.internship.repository.UserRepository userRepository;
 
-    public CdpcReviewController(CdpcReviewService cdpcReviewService) {
+    public CdpcReviewController(
+            CdpcReviewService cdpcReviewService,
+            com.placementos.internship.service.HrConfirmationService hrConfirmationService,
+            com.placementos.internship.repository.UserRepository userRepository
+    ) {
         this.cdpcReviewService = cdpcReviewService;
+        this.hrConfirmationService = hrConfirmationService;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/review-queue")
@@ -53,5 +61,16 @@ public class CdpcReviewController {
     @GetMapping("/{id}/noc")
     public ResponseEntity<NocRecordDTO> getNocRecord(@PathVariable Long id) {
         return ResponseEntity.ok(cdpcReviewService.getNocRecordByRequestId(id));
+    }
+
+    @PostMapping("/{id}/resend-hr-email")
+    @PreAuthorize("hasAnyRole('CDPC_STAFF', 'CDPC_ADMIN')")
+    public ResponseEntity<InternshipResponseDTO> resendHrEmail(
+            @PathVariable Long id,
+            java.security.Principal principal
+    ) {
+        com.placementos.internship.entity.User actioner = principal != null && principal.getName() != null
+                ? userRepository.findByEmail(principal.getName()).orElse(null) : null;
+        return ResponseEntity.ok(hrConfirmationService.resendHrEmail(id, actioner));
     }
 }

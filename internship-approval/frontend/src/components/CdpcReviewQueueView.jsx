@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, CheckCircle, XCircle, AlertTriangle, FileText, Loader2, RefreshCw, LogIn } from 'lucide-react';
+import { ShieldAlert, CheckCircle, XCircle, AlertTriangle, FileText, Loader2, RefreshCw, LogIn, Mail, Send, CheckCheck, Ban, Clock, AlertOctagon } from 'lucide-react';
 import { api } from '../services/api';
 import { RejectionModal } from './RejectionModal';
 
@@ -17,6 +17,7 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
   });
 
   const [actionInProgress, setActionInProgress] = useState(null);
+  const [resendingId, setResendingId] = useState(null);
 
   const fetchQueue = async () => {
     setIsLoading(true);
@@ -71,6 +72,21 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
     return true;
   });
 
+  const handleResendHr = async (requestId) => {
+    if (!window.confirm('Are you sure you want to resend the HR confirmation email? This will invalidate any previous link.')) {
+      return;
+    }
+    setResendingId(requestId);
+    try {
+      await api.resendHrEmail(requestId);
+      await fetchQueue();
+    } catch (err) {
+      alert(err.message || 'Failed to resend HR email');
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   const renderStatusBadge = (status) => {
     switch (status) {
       case 'MANUALLY_APPROVED':
@@ -85,6 +101,47 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
         return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-900 border border-rose-300">RULE FAILED</span>;
       default:
         return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">{status}</span>;
+    }
+  };
+
+  const renderHrConfirmationBadge = (status) => {
+    switch (status) {
+      case 'CONFIRMED':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+            <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <span>HR Confirmed</span>
+          </span>
+        );
+      case 'DENIED':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+            <Ban className="w-3.5 h-3.5 text-rose-600" />
+            <span>HR Denied Offer</span>
+          </span>
+        );
+      case 'PENDING':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-300">
+            <Clock className="w-3.5 h-3.5 text-blue-600" />
+            <span>HR Pending</span>
+          </span>
+        );
+      case 'EXPIRED':
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-300">
+            <Clock className="w-3.5 h-3.5 text-slate-500" />
+            <span>HR Expired</span>
+          </span>
+        );
+      case 'NOT_SENT':
+      default:
+        return (
+          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+            <Mail className="w-3.5 h-3.5 text-slate-400" />
+            <span>HR Not Sent</span>
+          </span>
+        );
     }
   };
 
@@ -183,6 +240,7 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
                     <span className="text-xs font-mono font-bold text-slate-400">REQ #{item.id}</span>
                     <h3 className="font-bold font-heading text-lg text-slate-900">{item.companyName}</h3>
                     {renderStatusBadge(item.status)}
+                    {renderHrConfirmationBadge(item.hrConfirmationStatus)}
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
@@ -200,9 +258,22 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
                     </div>
                     <div>
                       <span className="text-slate-400 block font-medium">HR Email</span>
-                      <strong className="text-slate-800">{item.hrContactEmail}</strong>
+                      <strong className="text-slate-800 break-all">{item.hrContactEmail}</strong>
                     </div>
                   </div>
+
+                  {/* HR Denied Strong Flag Warning */}
+                  {item.hrConfirmationStatus === 'DENIED' && (
+                    <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4 space-y-1">
+                      <div className="flex items-center space-x-2 text-red-900 font-bold text-xs uppercase tracking-wider">
+                        <AlertOctagon className="w-5 h-5 text-red-600 animate-pulse" />
+                        <span>CRITICAL SIGNAL: HR Contact Denied Issuing This Offer</span>
+                      </div>
+                      <p className="text-xs text-red-800 font-medium">
+                        The employer HR contact at {item.hrContactEmail} responded stating this offer was NOT issued by them or is unrecognized. Review with extreme caution.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Fraud Flags Visibly Surfaced */}
                   {item.scamFlags && item.scamFlags.length > 0 && (
@@ -255,6 +326,28 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
                     <XCircle className="w-4 h-4" />
                     <span>Reject Offer</span>
                   </button>
+
+                  {(item.hrConfirmationStatus === 'PENDING' || item.hrConfirmationStatus === 'EXPIRED') && (
+                    <button
+                      onClick={() => handleResendHr(item.id)}
+                      disabled={resendingId === item.id || (item.hrConfirmationResendCount || 0) >= 3}
+                      className="flex-1 lg:flex-none px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                      title={(item.hrConfirmationResendCount || 0) >= 3 ? 'Maximum resend limit (3) reached' : 'Resend confirmation email to HR'}
+                    >
+                      {resendingId === item.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-600" />
+                      ) : (
+                        <>
+                          <Mail className="w-3.5 h-3.5 text-slate-600" />
+                          <span>
+                            {(item.hrConfirmationResendCount || 0) >= 3
+                              ? 'Resend Limit (3/3)'
+                              : `Resend HR Email ${item.hrConfirmationResendCount ? `(${item.hrConfirmationResendCount}/3)` : ''}`}
+                          </span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
