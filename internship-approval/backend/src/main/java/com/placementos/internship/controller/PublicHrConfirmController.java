@@ -13,11 +13,15 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/public/hr-confirm")
-@RequiredArgsConstructor
 public class PublicHrConfirmController {
 
     private final HrConfirmationService hrConfirmationService;
     private final HrConfirmationRateLimiter rateLimiter;
+
+    public PublicHrConfirmController(HrConfirmationService hrConfirmationService, HrConfirmationRateLimiter rateLimiter) {
+        this.hrConfirmationService = hrConfirmationService;
+        this.rateLimiter = rateLimiter;
+    }
 
     @GetMapping("/{token}")
     public ResponseEntity<HrConfirmInfoDTO> getConfirmationDetails(
