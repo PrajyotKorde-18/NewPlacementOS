@@ -26,8 +26,7 @@ public class HrConfirmation {
     @Enumerated(EnumType.STRING)
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
     @Column(nullable = false, length = 32)
-    @Builder.Default
-    private HrConfirmationStatus status = HrConfirmationStatus.NOT_SENT;
+    private HrConfirmationStatus status;
 
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
@@ -42,8 +41,7 @@ public class HrConfirmation {
     private String responderIp;
 
     @Column(name = "resend_count", nullable = false)
-    @Builder.Default
-    private Integer resendCount = 0;
+    private Integer resendCount;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
