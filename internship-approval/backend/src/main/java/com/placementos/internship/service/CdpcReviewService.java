@@ -25,6 +25,7 @@ public class CdpcReviewService {
     private final UserRepository userRepository;
     private final NocRecordRepository nocRecordRepository;
     private final NocPdfGeneratorService nocPdfGeneratorService;
+    private final NocVerificationTokenService nocVerificationTokenService;
 
     private static final List<InternshipRequestStatus> PENDING_QUEUE_STATUSES = List.of(
             InternshipRequestStatus.SUBMITTED,
@@ -59,14 +60,23 @@ public class CdpcReviewService {
         request.setStatus(InternshipRequestStatus.MANUALLY_APPROVED);
         request = requestRepository.save(request);
 
-        // Generate NOC PDF using Apache PDFBox
-        String pdfPath = nocPdfGeneratorService.generateNocPdf(request, approver);
+        // Generate HMAC-SHA256 verification token
+        LocalDateTime approvedAt = LocalDateTime.now();
+        String studentEmail = request.getStudent() != null && request.getStudent().getUser() != null
+                ? request.getStudent().getUser().getEmail() : "";
+        String token = nocVerificationTokenService.generateToken(request.getId(), studentEmail, request.getCompanyName(), approvedAt);
+
+        // Generate NOC PDF using Apache PDFBox with embedded verification QR code
+        String pdfPath = nocPdfGeneratorService.generateNocPdf(request, approver, token);
 
         // Save NOC Record
         NocRecord nocRecord = NocRecord.builder()
                 .request(request)
                 .approvedBy(approver)
+                .approvedAt(approvedAt)
                 .pdfPath(pdfPath)
+                .verificationToken(token)
+                .qrGeneratedAt(approvedAt)
                 .build();
         nocRecordRepository.save(nocRecord);
 
@@ -116,6 +126,8 @@ public class CdpcReviewService {
                 .approvedByName(noc.getApprovedBy() != null ? noc.getApprovedBy().getName() : null)
                 .approvedAt(noc.getApprovedAt())
                 .pdfPath(noc.getPdfPath())
+                .verificationToken(noc.getVerificationToken())
+                .qrGeneratedAt(noc.getQrGeneratedAt())
                 .build();
     }
 

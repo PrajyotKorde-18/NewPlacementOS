@@ -42,7 +42,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR, jakarta.servlet.DispatcherType.FORWARD).permitAll()
-                .requestMatchers("/auth/**", "/h2-console/**", "/actuator/**", "/error").permitAll()
+                .requestMatchers("/auth/**", "/h2-console/**", "/actuator/**", "/error", "/public/noc/verify/**").permitAll()
                 .anyRequest().authenticated()
             )
             .headers(headers -> headers.frameOptions(frame -> frame.disable())); // For H2 console

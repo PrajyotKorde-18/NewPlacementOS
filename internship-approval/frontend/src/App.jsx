@@ -4,10 +4,20 @@ import { Header } from './components/Header';
 import { StudentSubmissionView } from './components/StudentSubmissionView';
 import { CdpcReviewQueueView } from './components/CdpcReviewQueueView';
 import { CdpcPolicyRulesView } from './components/CdpcPolicyRulesView';
+import { NocVerificationPage } from './components/NocVerificationPage';
 
 export function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('student-submit');
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('internship_user');
@@ -40,6 +50,16 @@ export function App() {
     localStorage.removeItem('internship_user');
     setCurrentUser(null);
   };
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+  };
+
+  // Public Verification Route (accessible logged in OR logged out)
+  if (currentPath.startsWith('/verify-noc')) {
+    return <NocVerificationPage onBackToLogin={() => navigateTo('/')} />;
+  }
 
   // Entry Gatekeeper: If user is not logged in, render the Auth Landing Page exclusively!
   if (!currentUser) {

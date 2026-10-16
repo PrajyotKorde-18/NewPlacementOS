@@ -30,8 +30,16 @@ public class NocRecord {
     @Column(name = "pdf_path", nullable = false)
     private String pdfPath;
 
+    @Column(name = "verification_token", unique = true, length = 64)
+    private String verificationToken;
+
+    @Column(name = "qr_generated_at")
+    private LocalDateTime qrGeneratedAt;
+
     @PrePersist
     protected void onCreate() {
-        approvedAt = LocalDateTime.now();
+        if (approvedAt == null) {
+            approvedAt = LocalDateTime.now();
+        }
     }
 }

@@ -143,4 +143,11 @@ export const api = {
     }
     return true;
   },
+
+  // Verify NOC Certificate (Public - No Auth Required)
+  verifyNocToken: async (token) => {
+    const response = await fetch(`${API_BASE_URL}/public/noc/verify/${encodeURIComponent(token)}`);
+    const data = await response.json();
+    return data;
+  },
 };

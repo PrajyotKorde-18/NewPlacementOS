@@ -15,3 +15,8 @@ app:
         name: System CDPC Admin
         role: CDPC_ADMIN
         college-id: ADMIN001
+  noc:
+    # Demo-only prototype secret (at least 32 characters, never use on public servers)
+    verification-secret: "demo_noc_verification_secret_min_32_characters_key"
+  verification:
+    base-url: "http://localhost:3001/verify-noc"

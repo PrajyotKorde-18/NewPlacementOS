@@ -9,4 +9,6 @@ import java.util.Optional;
 @Repository
 public interface NocRecordRepository extends JpaRepository<NocRecord, Long> {
     Optional<NocRecord> findByRequestId(Long requestId);
+    Optional<NocRecord> findByVerificationToken(String verificationToken);
+    java.util.List<NocRecord> findByVerificationTokenIsNull();
 }

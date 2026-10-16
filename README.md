@@ -99,6 +99,9 @@ $env:BOOTSTRAP_COORDINATOR_EMAIL="coord_user@rknec.edu"
 $env:BOOTSTRAP_COORDINATOR_PASSWORD="Coord@12345"
 $env:BOOTSTRAP_ADMIN_EMAIL="admin@rknec.edu"
 $env:BOOTSTRAP_ADMIN_PASSWORD="Admin@12345"
+
+# NOC Verification HMAC Secret (Required outside demo profile, min 32 chars)
+$env:NOC_VERIFICATION_SECRET="<generate-with-openssl-rand-hex-32>"
 ```
 
 ### Required Variables (Bash / Linux / macOS)
@@ -112,6 +115,7 @@ export BOOTSTRAP_COORDINATOR_EMAIL="coord_user@rknec.edu"
 export BOOTSTRAP_COORDINATOR_PASSWORD="Coord@12345"
 export BOOTSTRAP_ADMIN_EMAIL="admin@rknec.edu"
 export BOOTSTRAP_ADMIN_PASSWORD="Admin@12345"
+export NOC_VERIFICATION_SECRET="$(openssl rand -hex 32)"
 ```
 
 ---

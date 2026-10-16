@@ -14,4 +14,6 @@ public class NocRecordDTO {
     private String approvedByName;
     private LocalDateTime approvedAt;
     private String pdfPath;
+    private String verificationToken;
+    private LocalDateTime qrGeneratedAt;
 }

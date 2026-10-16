@@ -12,6 +12,8 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+  flyway:
+    enabled: false
 
 app:
   auth:
@@ -24,3 +26,8 @@ app:
   policy:
     default-min-stipend: 10000
     default-min-duration-weeks: 6
+  noc:
+    verification-secret: "test_noc_verification_secret_min_32_characters_key"
+  verification:
+    base-url: "http://localhost:3001/verify-noc"
+
