@@ -19,21 +19,28 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
   const [actionInProgress, setActionInProgress] = useState(null);
   const [resendingId, setResendingId] = useState(null);
 
-  const fetchQueue = async () => {
-    setIsLoading(true);
+  const fetchQueue = async (isBackground = false) => {
+    if (!isBackground) setIsLoading(true);
     setError(null);
     try {
       const data = await api.getReviewQueue();
       setQueue(data);
     } catch (err) {
-      setError(err.message || 'Failed to fetch CDPC review queue');
+      if (!isBackground) setError(err.message || 'Failed to fetch CDPC review queue');
     } finally {
-      setIsLoading(false);
+      if (!isBackground) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchQueue();
+    const handleFocus = () => fetchQueue(true);
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(() => fetchQueue(true), 5000);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, [currentUser]);
 
   const handleApprove = async (requestId) => {
@@ -108,16 +115,16 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
     switch (status) {
       case 'CONFIRMED':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-            <CheckCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>HR Confirmed</span>
+          <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border-2 border-emerald-500 shadow-2xs">
+            <CheckCheck className="w-4 h-4 text-emerald-600" />
+            <span>CONFIRMED BY HR</span>
           </span>
         );
       case 'DENIED':
         return (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
-            <Ban className="w-3.5 h-3.5 text-rose-600" />
-            <span>HR Denied Offer</span>
+          <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border-2 border-rose-500 shadow-2xs">
+            <Ban className="w-4 h-4 text-rose-600" />
+            <span>DENIED BY HR (Fake Offer)</span>
           </span>
         );
       case 'PENDING':
@@ -302,21 +309,32 @@ export function CdpcReviewQueueView({ currentUser, onOpenAuth }) {
                 </div>
 
                 {/* Explicit Human Action Buttons */}
-                <div className="flex flex-row lg:flex-col gap-2 min-w-[160px] justify-end">
-                  <button
-                    onClick={() => handleApprove(item.id)}
-                    disabled={actionInProgress === item.id}
-                    className="flex-1 lg:flex-none px-4 py-2.5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
-                  >
-                    {actionInProgress === item.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Approve & Generate NOC</span>
-                      </>
-                    )}
-                  </button>
+                <div className="flex flex-row lg:flex-col gap-2 min-w-[170px] justify-end">
+                  {/* If HR has explicitly denied the offer, block approval and only allow rejection */}
+                  {item.hrConfirmationStatus === 'DENIED' ? (
+                    <div className="px-3 py-2 bg-rose-50 border border-rose-300 rounded-lg text-center">
+                      <span className="text-xs font-bold text-rose-700 flex items-center justify-center gap-1.5">
+                        <Ban className="w-4 h-4 text-rose-600" />
+                        <span>Approval Blocked</span>
+                      </span>
+                      <p className="text-[10px] text-rose-600 font-medium mt-0.5">Offer was denied by HR</p>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleApprove(item.id)}
+                      disabled={actionInProgress === item.id}
+                      className="flex-1 lg:flex-none px-4 py-2.5 bg-[var(--brand)] hover:bg-[var(--brand-hover)] text-white text-xs font-bold rounded-lg shadow-sm transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
+                    >
+                      {actionInProgress === item.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Approve & Generate NOC</span>
+                        </>
+                      )}
+                    </button>
+                  )}
 
                   <button
                     onClick={() => openRejectModal(item.id, item.companyName)}
