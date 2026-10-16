@@ -18,7 +18,6 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class InternshipNotificationEventListener {
 
@@ -26,6 +25,18 @@ public class InternshipNotificationEventListener {
     private final InternshipRequestRepository requestRepository;
     private final NocRecordRepository nocRecordRepository;
     private final HrConfirmationService hrConfirmationService;
+
+    public InternshipNotificationEventListener(
+            InternshipEmailService emailService,
+            InternshipRequestRepository requestRepository,
+            NocRecordRepository nocRecordRepository,
+            HrConfirmationService hrConfirmationService
+    ) {
+        this.emailService = emailService;
+        this.requestRepository = requestRepository;
+        this.nocRecordRepository = nocRecordRepository;
+        this.hrConfirmationService = hrConfirmationService;
+    }
 
     @Async("notificationTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
