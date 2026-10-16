@@ -24,6 +24,7 @@ public class HrConfirmation {
     private String tokenHash;
 
     @Enumerated(EnumType.STRING)
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.VARCHAR)
     @Column(nullable = false, length = 32)
     @Builder.Default
     private HrConfirmationStatus status = HrConfirmationStatus.NOT_SENT;
