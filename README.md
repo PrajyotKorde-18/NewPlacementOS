@@ -1,4 +1,4 @@
-# PlacementOS
+# NewPlacementOS
 
 **PlacementOS** is an enterprise-grade, dual-microservice campus recruitment automation and internship governance platform engineered for university career centers and Training & Placement Offices (TPOs). The platform enforces institutional email identity (`@rknec.edu`), automates resume and job description criteria extraction using **Groq LLMs**, enforces deterministic academic eligibility cutoffs at the database layer, dynamically ranks candidates using a **Strategy-Pattern Candidate Scoring Engine**, and provides multi-signal fraud/scam detection for off-campus internship approvals.
 
